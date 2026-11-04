@@ -1,21 +1,401 @@
 // use prisma-8
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  username  String?
-  name      String?
-  posts     Post[]
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.UpdatedAtString
+// =====================================================================
+// Rental Room Finder: data contract
+// Ids are native Postgres uuid. Money is whole Nepali rupees (Int).
+// Enums are stored as text.
+// =====================================================================
+
+// ---------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------
+enum PropertyType {
+  @@type("pg/text@1")
+  Room = "room"
+  Flat = "flat"
+  House = "house"
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.UpdatedAtString
+enum Furnishing {
+  @@type("pg/text@1")
+  None = "none"
+  Semi = "semi"
+  Full = "full"
+}
+
+enum ParkingType {
+  @@type("pg/text@1")
+  None = "none"
+  Bike = "bike"
+  Car = "car"
+  Both = "both"
+}
+
+// Only the server changes a listing's status. The owner cannot set it.
+enum ListingStatus {
+  @@type("pg/text@1")
+  PendingPayment = "pending_payment"
+  Active = "active"
+  Hidden = "hidden"
+  Removed = "removed"
+  Expired = "expired"
+}
+
+enum FairPriceLabel {
+  @@type("pg/text@1")
+  Below = "below"
+  Fair = "fair"
+  Above = "above"
+  NotEnoughData = "not_enough_data"
+}
+
+enum MediaType {
+  @@type("pg/text@1")
+  Image = "image"
+  Video = "video"
+}
+
+enum PaymentProvider {
+  @@type("pg/text@1")
+  Khalti = "khalti"
+  Esewa = "esewa"
+}
+
+enum PaymentStatus {
+  @@type("pg/text@1")
+  Started = "started"
+  Success = "success"
+  Failed = "failed"
+}
+
+enum ReportReason {
+  @@type("pg/text@1")
+  Fake = "fake"
+  WrongPrice = "wrong_price"
+  AlreadyRented = "already_rented"
+  Scam = "scam"
+  Other = "other"
+}
+
+enum SmokingHabit {
+  @@type("pg/text@1")
+  Never = "never"
+  OutsideOnly = "outside_only"
+  Yes = "yes"
+}
+
+enum AlcoholHabit {
+  @@type("pg/text@1")
+  Never = "never"
+  Occasionally = "occasionally"
+  Regularly = "regularly"
+}
+
+enum SleepSchedule {
+  @@type("pg/text@1")
+  EarlySleeper = "early_sleeper"
+  Normal = "normal"
+  NightOwl = "night_owl"
+}
+
+enum LateNightActivity {
+  @@type("pg/text@1")
+  Rarely = "rarely"
+  Sometimes = "sometimes"
+  Often = "often"
+}
+
+enum GuestFrequency {
+  @@type("pg/text@1")
+  Never = "never"
+  Sometimes = "sometimes"
+  Often = "often"
+}
+
+enum CleanlinessLevel {
+  @@type("pg/text@1")
+  VeryTidy = "very_tidy"
+  Average = "average"
+  Relaxed = "relaxed"
+}
+
+enum PetPreference {
+  @@type("pg/text@1")
+  HavePet = "have_pet"
+  FineWithPets = "fine_with_pets"
+  NotOkay = "not_okay"
+}
+
+enum OccupationType {
+  @@type("pg/text@1")
+  Student = "student"
+  Working = "working"
+  WorkFromHome = "work_from_home"
+}
+
+enum RoommateQuestion {
+  @@type("pg/text@1")
+  Smoking = "smoking"
+  Alcohol = "alcohol"
+  SleepSchedule = "sleep_schedule"
+  LateNight = "late_night"
+  Guests = "guests"
+  Cleanliness = "cleanliness"
+  Pets = "pets"
+}
+
+// ---------------------------------------------------------------------
+// Better Auth tables (core schema + admin plugin + phone number plugin)
+// The database fills the id if Better Auth does not send one. Set
+// advanced.database.generateId = "uuid" in Better Auth so it sends UUIDs itself.
+// Table and column names follow Better Auth defaults.
+// ---------------------------------------------------------------------
+model User {
+  id                  Uuid             @id @default(sql`gen_random_uuid()`)
+  name                String
+  email               String           @unique
+  emailVerified       Boolean          @default(false)
+  image               String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @default(now())
+
+  // admin plugin
+  role                String?          @default("user")
+  banned              Boolean?         @default(false)
+  banReason           String?
+  banExpires          DateTime?
+
+  // phone number plugin
+  phoneNumber         String?          @unique
+  phoneNumberVerified Boolean?
+
+  sessions            Session[]
+  accounts            Account[]
+  listings            Listing[]
+  payments            Payment[]
+  reports             Report[]
+  roommateProfile     RoommateProfile?
+
+  @@map("user")
+}
+
+model Session {
+  id             Uuid     @id @default(sql`gen_random_uuid()`)
+  expiresAt      DateTime
+  token          String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+  ipAddress      String?
+  userAgent      String?
+  userId         Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // admin plugin: the admin's user id while impersonating
+  impersonatedBy Uuid?
+
+  @@index([userId])
+  @@map("session")
+}
+
+// One row per way of logging in. A Google login stores the Google id in accountId (plain text,
+// not a uuid). An email and password login stores the password hash in password.
+model Account {
+  id                    Uuid      @id @default(sql`gen_random_uuid()`)
+  accountId             String
+  providerId            String
+  userId                Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now())
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         Uuid     @id @default(sql`gen_random_uuid()`)
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------
+// Listings
+// ---------------------------------------------------------------------
+model Listing {
+  id                 Uuid               @id @onCreate(uuid())
+  ownerId            Uuid
+  owner              User               @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+
+  title              String
+  description        String
+
+  // The property
+  propertyType       PropertyType
+  bedrooms           Int
+  sizeSqft           Int? // optional: the fair price must still work without it
+  furnishing         Furnishing         @default(None)
+  parking            ParkingType        @default(None)
+  smokingAllowed     Boolean            @default(false)
+  alcoholAllowed     Boolean            @default(false)
+  petsAllowed        Boolean            @default(false)
+
+  // Price and place
+  rentPrice          Int // monthly rent in NPR
+  city               String
+  area               String
+  latitude           Float
+  longitude          Float
+
+  // Filled in by the server: the closest junction in the road graph (for Dijkstra)
+  nearestNodeId      BigIntNumber?
+
+  // Filled in by the server: the fair price result, saved so search does not recompute it
+  benchmarkPrice     Int?
+  fairPriceLabel     FairPriceLabel?
+  comparableCount    Int                @default(0)
+  fairPriceUpdatedAt DateTime?
+
+  // Life of the listing
+  status             ListingStatus      @default(PendingPayment)
+  availableFrom      Date
+  expiresAt          DateTime? // set when the listing becomes active
+  createdAt          DateTime           @default(now())
+  updatedAt          temporal.updatedAtString()
+
+  media              ListingMedia[]
+  facilities         ListingFacility[]
+  payments           Payment[]
+  reports            Report[]
+
+  @@index([status, city, propertyType, rentPrice]) // search filters
+  @@index([latitude, longitude]) // comparable rooms nearby
+  @@index([status, expiresAt]) // expiry job
+  @@index([ownerId])
+  @@map("listings")
+}
+
+model ListingMedia {
+  id        Uuid      @id @onCreate(uuid())
+  listingId Uuid
+  listing   Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url       String // link to the file in file storage
+  mediaType MediaType
+  sortOrder Int       @default(0)
+
+  @@index([listingId])
+  @@map("listing_media")
+}
+
+model Facility {
+  id       Uuid              @id @onCreate(uuid())
+  name     String            @unique
+  listings ListingFacility[]
+
+  @@map("facilities")
+}
+
+// Links listings and facilities (many to many)
+model ListingFacility {
+  listingId  Uuid
+  facilityId Uuid
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([listingId, facilityId])
+  @@index([facilityId])
+  @@map("listing_facilities")
+}
+
+// ---------------------------------------------------------------------
+// Payments and reports
+// ---------------------------------------------------------------------
+
+// One listing can have many payments (a failed try, then a success, then renewals).
+// The free first post creates no payment row.
+model Payment {
+  id            Uuid               @id @onCreate(uuid())
+  listingId     Uuid
+  listing       Listing            @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  userId        Uuid
+  user          User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  provider      PaymentProvider
+  amount        Int // NPR
+  status        PaymentStatus      @default(Started)
+  transactionId String? // the provider's transaction id, known after the provider replies
+  createdAt     DateTime           @default(now())
+  updatedAt     temporal.updatedAtString()
+
+  @@unique([provider, transactionId])
+  @@index([listingId])
+  @@index([userId])
+  @@map("payments")
+}
+
+// One user can report a listing only once. After enough reports it is hidden.
+model Report {
+  id         Uuid         @id @onCreate(uuid())
+  listingId  Uuid
+  listing    Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reporterId Uuid
+  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason     ReportReason
+  createdAt  DateTime     @default(now())
+
+  @@unique([listingId, reporterId])
+  @@index([reporterId])
+  @@map("reports")
+}
+
+// ---------------------------------------------------------------------
+// Roommate profile (optional, one per user)
+// ---------------------------------------------------------------------
+model RoommateProfile {
+  id            Uuid                  @id @onCreate(uuid())
+  userId        Uuid                  @unique
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  smoking       SmokingHabit
+  alcohol       AlcoholHabit
+  sleepSchedule SleepSchedule
+  lateNight     LateNightActivity
+  guests        GuestFrequency
+  cleanliness   CleanlinessLevel
+  pets          PetPreference
+  occupation    OccupationType
+
+  budgetMin     Int
+  budgetMax     Int
+  moveInDate    Date?
+
+  // Any question listed here is a dealbreaker: matches who break it are filtered out first
+  // (a child table, because Prisma 8 does not support lists of enums)
+  dealbreakers  RoommateDealbreaker[]
+
+  createdAt     DateTime              @default(now())
+  updatedAt     temporal.updatedAtString()
+
+  @@map("roommate_profiles")
+}
+
+// One row per dealbreaker question a profile has chosen
+model RoommateDealbreaker {
+  profileId Uuid
+  profile   RoommateProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  question  RoommateQuestion
+
+  @@id([profileId, question])
+  @@map("roommate_dealbreakers")
 }
