@@ -23,10 +23,13 @@
     "contract:emit": "prisma contract emit"
   },
   "dependencies": {
+    "@clerk/express": "^2.1.88",
     "@nestjs/common": "^12.0.1",
     "@nestjs/core": "^12.0.1",
+    "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^12.0.1",
     "@prisma/orm-postgres": "8.0.0-rc.20",
+    "@thallesp/nestjs-better-auth": "^2.8.0",
     "dotenv": "^18.0.9",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

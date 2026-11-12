@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'6da85dfb8dce4445b3ff66e600fdec0a9d2c0adf25da1efad388907e6bbc0575'>;
+  StorageHashBase<'c8eeb7a0fc0c74ab5e5f9c48103bf65802b628b07c677dac5954eaedc26cc60d'>;
 export type ExecutionHash =
-  ExecutionHashBase<'f3a77448cdcaa84b7c5b2b56b96dd050b5eb36d73b9abc9a2f21adbfd6a70df8'>;
+  ExecutionHashBase<'cfa590ca50849d40fdf723c7998d44bfc788b70e5b18961313b589ec62d8e518'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -285,59 +285,8 @@ type FieldTypeOverrides = {
           readonly input: 'fake' | 'wrong_price' | 'already_rented' | 'scam' | 'other';
         };
       };
-      readonly RoommateDealbreaker: {
-        readonly question: {
-          readonly output:
-            | 'smoking'
-            | 'alcohol'
-            | 'sleep_schedule'
-            | 'late_night'
-            | 'guests'
-            | 'cleanliness'
-            | 'pets';
-          readonly input:
-            | 'smoking'
-            | 'alcohol'
-            | 'sleep_schedule'
-            | 'late_night'
-            | 'guests'
-            | 'cleanliness'
-            | 'pets';
-        };
-      };
-      readonly RoommateProfile: {
-        readonly alcohol: {
-          readonly output: 'never' | 'occasionally' | 'regularly';
-          readonly input: 'never' | 'occasionally' | 'regularly';
-        };
-        readonly cleanliness: {
-          readonly output: 'very_tidy' | 'average' | 'relaxed';
-          readonly input: 'very_tidy' | 'average' | 'relaxed';
-        };
-        readonly guests: {
-          readonly output: 'never' | 'sometimes' | 'often';
-          readonly input: 'never' | 'sometimes' | 'often';
-        };
-        readonly lateNight: {
-          readonly output: 'rarely' | 'sometimes' | 'often';
-          readonly input: 'rarely' | 'sometimes' | 'often';
-        };
-        readonly occupation: {
-          readonly output: 'student' | 'working' | 'work_from_home';
-          readonly input: 'student' | 'working' | 'work_from_home';
-        };
-        readonly pets: {
-          readonly output: 'have_pet' | 'fine_with_pets' | 'not_okay';
-          readonly input: 'have_pet' | 'fine_with_pets' | 'not_okay';
-        };
-        readonly sleepSchedule: {
-          readonly output: 'early_sleeper' | 'normal' | 'night_owl';
-          readonly input: 'early_sleeper' | 'normal' | 'night_owl';
-        };
-        readonly smoking: {
-          readonly output: 'never' | 'outside_only' | 'yes';
-          readonly input: 'never' | 'outside_only' | 'yes';
-        };
+      readonly User: {
+        readonly role: { readonly output: 'user' | 'admin'; readonly input: 'user' | 'admin' };
       };
     };
   };
@@ -399,59 +348,8 @@ type ColumnTypeOverrides = {
         readonly input: 'fake' | 'wrong_price' | 'already_rented' | 'scam' | 'other';
       };
     };
-    readonly roommate_dealbreakers: {
-      readonly question: {
-        readonly output:
-          | 'smoking'
-          | 'alcohol'
-          | 'sleep_schedule'
-          | 'late_night'
-          | 'guests'
-          | 'cleanliness'
-          | 'pets';
-        readonly input:
-          | 'smoking'
-          | 'alcohol'
-          | 'sleep_schedule'
-          | 'late_night'
-          | 'guests'
-          | 'cleanliness'
-          | 'pets';
-      };
-    };
-    readonly roommate_profiles: {
-      readonly alcohol: {
-        readonly output: 'never' | 'occasionally' | 'regularly';
-        readonly input: 'never' | 'occasionally' | 'regularly';
-      };
-      readonly cleanliness: {
-        readonly output: 'very_tidy' | 'average' | 'relaxed';
-        readonly input: 'very_tidy' | 'average' | 'relaxed';
-      };
-      readonly guests: {
-        readonly output: 'never' | 'sometimes' | 'often';
-        readonly input: 'never' | 'sometimes' | 'often';
-      };
-      readonly lateNight: {
-        readonly output: 'rarely' | 'sometimes' | 'often';
-        readonly input: 'rarely' | 'sometimes' | 'often';
-      };
-      readonly occupation: {
-        readonly output: 'student' | 'working' | 'work_from_home';
-        readonly input: 'student' | 'working' | 'work_from_home';
-      };
-      readonly pets: {
-        readonly output: 'have_pet' | 'fine_with_pets' | 'not_okay';
-        readonly input: 'have_pet' | 'fine_with_pets' | 'not_okay';
-      };
-      readonly sleepSchedule: {
-        readonly output: 'early_sleeper' | 'normal' | 'night_owl';
-        readonly input: 'early_sleeper' | 'normal' | 'night_owl';
-      };
-      readonly smoking: {
-        readonly output: 'never' | 'outside_only' | 'yes';
-        readonly input: 'never' | 'outside_only' | 'yes';
-      };
+    readonly users: {
+      readonly role: { readonly output: 'user' | 'admin'; readonly input: 'user' | 'admin' };
     };
   };
 };
@@ -471,23 +369,6 @@ export type StorageColumnInputTypes = ColumnTypesFromStorage<
 >;
 
 export namespace Models {
-  export type public_Account = {
-    accessToken: FieldOutputTypes['public']['Account']['accessToken'];
-    accessTokenExpiresAt: FieldOutputTypes['public']['Account']['accessTokenExpiresAt'];
-    accountId: FieldOutputTypes['public']['Account']['accountId'];
-    createdAt: FieldOutputTypes['public']['Account']['createdAt'];
-    id: FieldOutputTypes['public']['Account']['id'];
-    idToken: FieldOutputTypes['public']['Account']['idToken'];
-    password: FieldOutputTypes['public']['Account']['password'];
-    providerId: FieldOutputTypes['public']['Account']['providerId'];
-    refreshToken: FieldOutputTypes['public']['Account']['refreshToken'];
-    refreshTokenExpiresAt: FieldOutputTypes['public']['Account']['refreshTokenExpiresAt'];
-    scope: FieldOutputTypes['public']['Account']['scope'];
-    updatedAt: FieldOutputTypes['public']['Account']['updatedAt'];
-    userId: FieldOutputTypes['public']['Account']['userId'];
-    user: public_User;
-    readonly [RelationKeys]?: 'user';
-  };
   export type public_Facility = {
     id: FieldOutputTypes['public']['Facility']['id'];
     name: FieldOutputTypes['public']['Facility']['name'];
@@ -569,93 +450,30 @@ export namespace Models {
     reporter: public_User;
     readonly [RelationKeys]?: 'listing' | 'reporter';
   };
-  export type public_RoommateDealbreaker = {
-    profileId: FieldOutputTypes['public']['RoommateDealbreaker']['profileId'];
-    question: FieldOutputTypes['public']['RoommateDealbreaker']['question'];
-    profile: public_RoommateProfile;
-    readonly [RelationKeys]?: 'profile';
-  };
-  export type public_RoommateProfile = {
-    alcohol: FieldOutputTypes['public']['RoommateProfile']['alcohol'];
-    budgetMax: FieldOutputTypes['public']['RoommateProfile']['budgetMax'];
-    budgetMin: FieldOutputTypes['public']['RoommateProfile']['budgetMin'];
-    cleanliness: FieldOutputTypes['public']['RoommateProfile']['cleanliness'];
-    createdAt: FieldOutputTypes['public']['RoommateProfile']['createdAt'];
-    guests: FieldOutputTypes['public']['RoommateProfile']['guests'];
-    id: FieldOutputTypes['public']['RoommateProfile']['id'];
-    lateNight: FieldOutputTypes['public']['RoommateProfile']['lateNight'];
-    moveInDate: FieldOutputTypes['public']['RoommateProfile']['moveInDate'];
-    occupation: FieldOutputTypes['public']['RoommateProfile']['occupation'];
-    pets: FieldOutputTypes['public']['RoommateProfile']['pets'];
-    sleepSchedule: FieldOutputTypes['public']['RoommateProfile']['sleepSchedule'];
-    smoking: FieldOutputTypes['public']['RoommateProfile']['smoking'];
-    updatedAt: FieldOutputTypes['public']['RoommateProfile']['updatedAt'];
-    userId: FieldOutputTypes['public']['RoommateProfile']['userId'];
-    dealbreakers: public_RoommateDealbreaker[];
-    user: public_User;
-    readonly [RelationKeys]?: 'dealbreakers' | 'user';
-  };
-  export type public_Session = {
-    createdAt: FieldOutputTypes['public']['Session']['createdAt'];
-    expiresAt: FieldOutputTypes['public']['Session']['expiresAt'];
-    id: FieldOutputTypes['public']['Session']['id'];
-    impersonatedBy: FieldOutputTypes['public']['Session']['impersonatedBy'];
-    ipAddress: FieldOutputTypes['public']['Session']['ipAddress'];
-    token: FieldOutputTypes['public']['Session']['token'];
-    updatedAt: FieldOutputTypes['public']['Session']['updatedAt'];
-    userAgent: FieldOutputTypes['public']['Session']['userAgent'];
-    userId: FieldOutputTypes['public']['Session']['userId'];
-    user: public_User;
-    readonly [RelationKeys]?: 'user';
-  };
   export type public_User = {
-    banExpires: FieldOutputTypes['public']['User']['banExpires'];
-    banReason: FieldOutputTypes['public']['User']['banReason'];
-    banned: FieldOutputTypes['public']['User']['banned'];
+    clerkId: FieldOutputTypes['public']['User']['clerkId'];
     createdAt: FieldOutputTypes['public']['User']['createdAt'];
-    email: FieldOutputTypes['public']['User']['email'];
-    emailVerified: FieldOutputTypes['public']['User']['emailVerified'];
+    freePostUsed: FieldOutputTypes['public']['User']['freePostUsed'];
     id: FieldOutputTypes['public']['User']['id'];
-    image: FieldOutputTypes['public']['User']['image'];
-    name: FieldOutputTypes['public']['User']['name'];
-    phoneNumber: FieldOutputTypes['public']['User']['phoneNumber'];
-    phoneNumberVerified: FieldOutputTypes['public']['User']['phoneNumberVerified'];
+    phoneVerified: FieldOutputTypes['public']['User']['phoneVerified'];
     role: FieldOutputTypes['public']['User']['role'];
     updatedAt: FieldOutputTypes['public']['User']['updatedAt'];
-    accounts: public_Account[];
     listings: public_Listing[];
     payments: public_Payment[];
     reports: public_Report[];
-    roommateProfile: public_RoommateProfile | null;
-    sessions: public_Session[];
-    readonly [RelationKeys]?:
-      'accounts' | 'listings' | 'payments' | 'reports' | 'roommateProfile' | 'sessions';
-  };
-  export type public_Verification = {
-    createdAt: FieldOutputTypes['public']['Verification']['createdAt'];
-    expiresAt: FieldOutputTypes['public']['Verification']['expiresAt'];
-    id: FieldOutputTypes['public']['Verification']['id'];
-    identifier: FieldOutputTypes['public']['Verification']['identifier'];
-    updatedAt: FieldOutputTypes['public']['Verification']['updatedAt'];
-    value: FieldOutputTypes['public']['Verification']['value'];
-    readonly [RelationKeys]?: never;
+    readonly [RelationKeys]?: 'listings' | 'payments' | 'reports';
   };
 }
 
 export declare const models: {
   public: {
-    Account: Models.public_Account;
     Facility: Models.public_Facility;
     Listing: Models.public_Listing;
     ListingFacility: Models.public_ListingFacility;
     ListingMedia: Models.public_ListingMedia;
     Payment: Models.public_Payment;
     Report: Models.public_Report;
-    RoommateDealbreaker: Models.public_RoommateDealbreaker;
-    RoommateProfile: Models.public_RoommateProfile;
-    Session: Models.public_Session;
     User: Models.public_User;
-    Verification: Models.public_Verification;
   };
 };
 
@@ -677,118 +495,6 @@ type ContractBase = Omit<
         readonly kind: 'postgres-schema';
         readonly entries: {
           readonly table: {
-            readonly account: {
-              columns: {
-                readonly accessToken: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly accessTokenExpiresAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly accountId: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly createdAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly many: false;
-                };
-                readonly id: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'function';
-                    readonly expression: 'gen_random_uuid()';
-                  };
-                  readonly many: false;
-                };
-                readonly idToken: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly password: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly providerId: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly refreshToken: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly refreshTokenExpiresAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly scope: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly updatedAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly many: false;
-                };
-                readonly userId: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-              };
-              primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [];
-              indexes: readonly [
-                {
-                  readonly name: 'account_userId_idx_a489d58a';
-                  readonly prefix: 'account_userId_idx';
-                  readonly columns: readonly ['userId'];
-                  readonly unique: false;
-                },
-              ];
-              foreignKeys: readonly [
-                {
-                  readonly source: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'account';
-                    readonly columns: readonly ['userId'];
-                  };
-                  readonly target: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'user';
-                    readonly columns: readonly ['id'];
-                  };
-                },
-              ];
-            };
             readonly facilities: {
               columns: {
                 readonly id: {
@@ -1118,7 +824,7 @@ type ContractBase = Omit<
                 };
                 readonly updatedAt: {
                   readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
                   readonly many: false;
                 };
@@ -1160,7 +866,7 @@ type ContractBase = Omit<
                   };
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'user';
+                    readonly tableName: 'users';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -1217,7 +923,7 @@ type ContractBase = Omit<
                 };
                 readonly updatedAt: {
                   readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
                   readonly many: false;
                 };
@@ -1265,7 +971,7 @@ type ContractBase = Omit<
                   };
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'user';
+                    readonly tableName: 'users';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -1342,73 +1048,15 @@ type ContractBase = Omit<
                   };
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'user';
+                    readonly tableName: 'users';
                     readonly columns: readonly ['id'];
                   };
                 },
               ];
             };
-            readonly roommate_dealbreakers: {
+            readonly users: {
               columns: {
-                readonly profileId: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly question: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-              };
-              primaryKey: { readonly columns: readonly ['profileId', 'question'] };
-              uniques: readonly [];
-              indexes: readonly [
-                {
-                  readonly name: 'roommate_dealbreakers_profileId_idx_d9cdfcaf';
-                  readonly prefix: 'roommate_dealbreakers_profileId_idx';
-                  readonly columns: readonly ['profileId'];
-                  readonly unique: false;
-                },
-              ];
-              foreignKeys: readonly [
-                {
-                  readonly source: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'roommate_dealbreakers';
-                    readonly columns: readonly ['profileId'];
-                  };
-                  readonly target: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'roommate_profiles';
-                    readonly columns: readonly ['id'];
-                  };
-                },
-              ];
-            };
-            readonly roommate_profiles: {
-              columns: {
-                readonly alcohol: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly budgetMax: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly budgetMin: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly cleanliness: {
+                readonly clerkId: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
@@ -1421,211 +1069,7 @@ type ContractBase = Omit<
                   readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
                   readonly many: false;
                 };
-                readonly guests: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly id: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly lateNight: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly moveInDate: {
-                  readonly dataType: 'pg/date';
-                  readonly codecId: 'pg/date-temporal@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly occupation: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly pets: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly sleepSchedule: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly smoking: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly updatedAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly userId: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-              };
-              primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [{ readonly columns: readonly ['userId'] }];
-              indexes: readonly [];
-              foreignKeys: readonly [
-                {
-                  readonly source: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'roommate_profiles';
-                    readonly columns: readonly ['userId'];
-                  };
-                  readonly target: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'user';
-                    readonly columns: readonly ['id'];
-                  };
-                },
-              ];
-            };
-            readonly session: {
-              columns: {
-                readonly createdAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly many: false;
-                };
-                readonly expiresAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly id: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'function';
-                    readonly expression: 'gen_random_uuid()';
-                  };
-                  readonly many: false;
-                };
-                readonly impersonatedBy: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly ipAddress: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly token: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly updatedAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly many: false;
-                };
-                readonly userAgent: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly userId: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-              };
-              primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [{ readonly columns: readonly ['token'] }];
-              indexes: readonly [
-                {
-                  readonly name: 'session_userId_idx_a489d58a';
-                  readonly prefix: 'session_userId_idx';
-                  readonly columns: readonly ['userId'];
-                  readonly unique: false;
-                },
-              ];
-              foreignKeys: readonly [
-                {
-                  readonly source: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'session';
-                    readonly columns: readonly ['userId'];
-                  };
-                  readonly target: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'user';
-                    readonly columns: readonly ['id'];
-                  };
-                },
-              ];
-            };
-            readonly user: {
-              columns: {
-                readonly banExpires: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly banReason: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly banned: {
-                  readonly dataType: 'pg/bool';
-                  readonly codecId: 'pg/bool@1';
-                  readonly nullable: true;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
-                  };
-                  readonly many: false;
-                };
-                readonly createdAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly many: false;
-                };
-                readonly email: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly emailVerified: {
+                readonly freePostUsed: {
                   readonly dataType: 'pg/bool';
                   readonly codecId: 'pg/bool@1';
                   readonly nullable: false;
@@ -1639,40 +1083,22 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/uuid';
                   readonly codecId: 'pg/uuid@1';
                   readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'function';
-                    readonly expression: 'gen_random_uuid()';
-                  };
                   readonly many: false;
                 };
-                readonly image: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly name: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly phoneNumber: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly phoneNumberVerified: {
+                readonly phoneVerified: {
                   readonly dataType: 'pg/bool';
                   readonly codecId: 'pg/bool@1';
-                  readonly nullable: true;
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
+                  };
                   readonly many: false;
                 };
                 readonly role: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
+                  readonly nullable: false;
                   readonly default: {
                     readonly kind: 'literal';
                     readonly value: DefaultLiteralValue<'pg/text@1', 'user'>;
@@ -1683,85 +1109,16 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/timestamptz';
                   readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
                   readonly many: false;
                 };
               };
               primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [
-                { readonly columns: readonly ['email'] },
-                { readonly columns: readonly ['phoneNumber'] },
-              ];
+              uniques: readonly [{ readonly columns: readonly ['clerkId'] }];
               indexes: readonly [];
-              foreignKeys: readonly [];
-            };
-            readonly verification: {
-              columns: {
-                readonly createdAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly many: false;
-                };
-                readonly expiresAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly id: {
-                  readonly dataType: 'pg/uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'function';
-                    readonly expression: 'gen_random_uuid()';
-                  };
-                  readonly many: false;
-                };
-                readonly identifier: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly updatedAt: {
-                  readonly dataType: 'pg/timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly many: false;
-                };
-                readonly value: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-              };
-              primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [];
-              indexes: readonly [
-                {
-                  readonly name: 'verification_identifier_idx_79a0dbb3';
-                  readonly prefix: 'verification_identifier_idx';
-                  readonly columns: readonly ['identifier'];
-                  readonly unique: false;
-                },
-              ];
               foreignKeys: readonly [];
             };
           };
           readonly valueSet: {
-            readonly AlcoholHabit: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['never', 'occasionally', 'regularly'];
-            };
-            readonly CleanlinessLevel: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['very_tidy', 'average', 'relaxed'];
-            };
             readonly FairPriceLabel: {
               readonly kind: 'valueSet';
               readonly values: readonly ['below', 'fair', 'above', 'not_enough_data'];
@@ -1769,14 +1126,6 @@ type ContractBase = Omit<
             readonly Furnishing: {
               readonly kind: 'valueSet';
               readonly values: readonly ['none', 'semi', 'full'];
-            };
-            readonly GuestFrequency: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['never', 'sometimes', 'often'];
-            };
-            readonly LateNightActivity: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['rarely', 'sometimes', 'often'];
             };
             readonly ListingStatus: {
               readonly kind: 'valueSet';
@@ -1792,10 +1141,6 @@ type ContractBase = Omit<
               readonly kind: 'valueSet';
               readonly values: readonly ['image', 'video'];
             };
-            readonly OccupationType: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['student', 'working', 'work_from_home'];
-            };
             readonly ParkingType: {
               readonly kind: 'valueSet';
               readonly values: readonly ['none', 'bike', 'car', 'both'];
@@ -1808,10 +1153,6 @@ type ContractBase = Omit<
               readonly kind: 'valueSet';
               readonly values: readonly ['started', 'success', 'failed'];
             };
-            readonly PetPreference: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['have_pet', 'fine_with_pets', 'not_okay'];
-            };
             readonly PropertyType: {
               readonly kind: 'valueSet';
               readonly values: readonly ['room', 'flat', 'house'];
@@ -1820,25 +1161,9 @@ type ContractBase = Omit<
               readonly kind: 'valueSet';
               readonly values: readonly ['fake', 'wrong_price', 'already_rented', 'scam', 'other'];
             };
-            readonly RoommateQuestion: {
+            readonly UserRole: {
               readonly kind: 'valueSet';
-              readonly values: readonly [
-                'smoking',
-                'alcohol',
-                'sleep_schedule',
-                'late_night',
-                'guests',
-                'cleanliness',
-                'pets',
-              ];
-            };
-            readonly SleepSchedule: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['early_sleeper', 'normal', 'night_owl'];
-            };
-            readonly SmokingHabit: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['never', 'outside_only', 'yes'];
+              readonly values: readonly ['user', 'admin'];
             };
           };
         };
@@ -1851,7 +1176,6 @@ type ContractBase = Omit<
   readonly target: 'postgres';
   readonly targetFamily: 'sql';
   readonly roots: {
-    readonly account: { readonly namespace: 'public' & NamespaceId; readonly model: 'Account' };
     readonly facilities: { readonly namespace: 'public' & NamespaceId; readonly model: 'Facility' };
     readonly listing_facilities: {
       readonly namespace: 'public' & NamespaceId;
@@ -1864,123 +1188,12 @@ type ContractBase = Omit<
     readonly listings: { readonly namespace: 'public' & NamespaceId; readonly model: 'Listing' };
     readonly payments: { readonly namespace: 'public' & NamespaceId; readonly model: 'Payment' };
     readonly reports: { readonly namespace: 'public' & NamespaceId; readonly model: 'Report' };
-    readonly roommate_dealbreakers: {
-      readonly namespace: 'public' & NamespaceId;
-      readonly model: 'RoommateDealbreaker';
-    };
-    readonly roommate_profiles: {
-      readonly namespace: 'public' & NamespaceId;
-      readonly model: 'RoommateProfile';
-    };
-    readonly session: { readonly namespace: 'public' & NamespaceId; readonly model: 'Session' };
-    readonly user: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
-    readonly verification: {
-      readonly namespace: 'public' & NamespaceId;
-      readonly model: 'Verification';
-    };
+    readonly users: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
   };
   readonly domain: {
     readonly namespaces: {
       readonly public: {
         readonly models: {
-          readonly Account: {
-            readonly fields: {
-              readonly accessToken: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly accessTokenExpiresAt: {
-                readonly nullable: true;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly accountId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly createdAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly id: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly idToken: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly password: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly providerId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly refreshToken: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly refreshTokenExpiresAt: {
-                readonly nullable: true;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly scope: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly updatedAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly userId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-            };
-            readonly relations: {
-              readonly user: {
-                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
-                readonly cardinality: 'N:1';
-                readonly nullable: false;
-                readonly on: {
-                  readonly localFields: readonly ['userId'];
-                  readonly targetFields: readonly ['id'];
-                };
-              };
-            };
-            readonly storage: {
-              readonly table: 'account';
-              readonly namespaceId: 'public';
-              readonly fields: {
-                readonly accessToken: { readonly column: 'accessToken' };
-                readonly accessTokenExpiresAt: { readonly column: 'accessTokenExpiresAt' };
-                readonly accountId: { readonly column: 'accountId' };
-                readonly createdAt: { readonly column: 'createdAt' };
-                readonly id: { readonly column: 'id' };
-                readonly idToken: { readonly column: 'idToken' };
-                readonly password: { readonly column: 'password' };
-                readonly providerId: { readonly column: 'providerId' };
-                readonly refreshToken: { readonly column: 'refreshToken' };
-                readonly refreshTokenExpiresAt: { readonly column: 'refreshTokenExpiresAt' };
-                readonly scope: { readonly column: 'scope' };
-                readonly updatedAt: { readonly column: 'updatedAt' };
-                readonly userId: { readonly column: 'userId' };
-              };
-            };
-          };
           readonly Facility: {
             readonly fields: {
               readonly id: {
@@ -2133,7 +1346,7 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: {
                   readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
             };
@@ -2358,7 +1571,7 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: {
                   readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
               readonly userId: {
@@ -2466,244 +1679,11 @@ type ContractBase = Omit<
               };
             };
           };
-          readonly RoommateDealbreaker: {
-            readonly fields: {
-              readonly profileId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly question: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-            };
-            readonly relations: {
-              readonly profile: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'RoommateProfile';
-                };
-                readonly cardinality: 'N:1';
-                readonly nullable: false;
-                readonly on: {
-                  readonly localFields: readonly ['profileId'];
-                  readonly targetFields: readonly ['id'];
-                };
-              };
-            };
-            readonly storage: {
-              readonly table: 'roommate_dealbreakers';
-              readonly namespaceId: 'public';
-              readonly fields: {
-                readonly profileId: { readonly column: 'profileId' };
-                readonly question: { readonly column: 'question' };
-              };
-            };
-          };
-          readonly RoommateProfile: {
-            readonly fields: {
-              readonly alcohol: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly budgetMax: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly budgetMin: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly cleanliness: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly createdAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly guests: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly id: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly lateNight: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly moveInDate: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-temporal@1' };
-              };
-              readonly occupation: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly pets: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly sleepSchedule: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly smoking: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly updatedAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
-                };
-              };
-              readonly userId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-            };
-            readonly relations: {
-              readonly dealbreakers: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'RoommateDealbreaker';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['profileId'];
-                };
-              };
-              readonly user: {
-                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
-                readonly cardinality: 'N:1';
-                readonly nullable: false;
-                readonly on: {
-                  readonly localFields: readonly ['userId'];
-                  readonly targetFields: readonly ['id'];
-                };
-              };
-            };
-            readonly storage: {
-              readonly table: 'roommate_profiles';
-              readonly namespaceId: 'public';
-              readonly fields: {
-                readonly alcohol: { readonly column: 'alcohol' };
-                readonly budgetMax: { readonly column: 'budgetMax' };
-                readonly budgetMin: { readonly column: 'budgetMin' };
-                readonly cleanliness: { readonly column: 'cleanliness' };
-                readonly createdAt: { readonly column: 'createdAt' };
-                readonly guests: { readonly column: 'guests' };
-                readonly id: { readonly column: 'id' };
-                readonly lateNight: { readonly column: 'lateNight' };
-                readonly moveInDate: { readonly column: 'moveInDate' };
-                readonly occupation: { readonly column: 'occupation' };
-                readonly pets: { readonly column: 'pets' };
-                readonly sleepSchedule: { readonly column: 'sleepSchedule' };
-                readonly smoking: { readonly column: 'smoking' };
-                readonly updatedAt: { readonly column: 'updatedAt' };
-                readonly userId: { readonly column: 'userId' };
-              };
-            };
-          };
-          readonly Session: {
-            readonly fields: {
-              readonly createdAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly expiresAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly id: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly impersonatedBy: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly ipAddress: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly token: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly updatedAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly userAgent: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly userId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-            };
-            readonly relations: {
-              readonly user: {
-                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
-                readonly cardinality: 'N:1';
-                readonly nullable: false;
-                readonly on: {
-                  readonly localFields: readonly ['userId'];
-                  readonly targetFields: readonly ['id'];
-                };
-              };
-            };
-            readonly storage: {
-              readonly table: 'session';
-              readonly namespaceId: 'public';
-              readonly fields: {
-                readonly createdAt: { readonly column: 'createdAt' };
-                readonly expiresAt: { readonly column: 'expiresAt' };
-                readonly id: { readonly column: 'id' };
-                readonly impersonatedBy: { readonly column: 'impersonatedBy' };
-                readonly ipAddress: { readonly column: 'ipAddress' };
-                readonly token: { readonly column: 'token' };
-                readonly updatedAt: { readonly column: 'updatedAt' };
-                readonly userAgent: { readonly column: 'userAgent' };
-                readonly userId: { readonly column: 'userId' };
-              };
-            };
-          };
           readonly User: {
             readonly fields: {
-              readonly banExpires: {
-                readonly nullable: true;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly banReason: {
-                readonly nullable: true;
+              readonly clerkId: {
+                readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly banned: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
               readonly createdAt: {
                 readonly nullable: false;
@@ -2712,11 +1692,7 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
-              readonly email: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly emailVerified: {
+              readonly freePostUsed: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
@@ -2724,24 +1700,12 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
-              readonly image: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly name: {
+              readonly phoneVerified: {
                 readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly phoneNumber: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly phoneNumberVerified: {
-                readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
               readonly role: {
-                readonly nullable: true;
+                readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly updatedAt: {
@@ -2753,17 +1717,6 @@ type ContractBase = Omit<
               };
             };
             readonly relations: {
-              readonly accounts: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'Account';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['userId'];
-                };
-              };
               readonly listings: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -2797,118 +1750,23 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['reporterId'];
                 };
               };
-              readonly roommateProfile: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'RoommateProfile';
-                };
-                readonly cardinality: '1:1';
-                readonly nullable: true;
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['userId'];
-                };
-              };
-              readonly sessions: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'Session';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['userId'];
-                };
-              };
             };
             readonly storage: {
-              readonly table: 'user';
+              readonly table: 'users';
               readonly namespaceId: 'public';
               readonly fields: {
-                readonly banExpires: { readonly column: 'banExpires' };
-                readonly banReason: { readonly column: 'banReason' };
-                readonly banned: { readonly column: 'banned' };
+                readonly clerkId: { readonly column: 'clerkId' };
                 readonly createdAt: { readonly column: 'createdAt' };
-                readonly email: { readonly column: 'email' };
-                readonly emailVerified: { readonly column: 'emailVerified' };
+                readonly freePostUsed: { readonly column: 'freePostUsed' };
                 readonly id: { readonly column: 'id' };
-                readonly image: { readonly column: 'image' };
-                readonly name: { readonly column: 'name' };
-                readonly phoneNumber: { readonly column: 'phoneNumber' };
-                readonly phoneNumberVerified: { readonly column: 'phoneNumberVerified' };
+                readonly phoneVerified: { readonly column: 'phoneVerified' };
                 readonly role: { readonly column: 'role' };
                 readonly updatedAt: { readonly column: 'updatedAt' };
               };
             };
           };
-          readonly Verification: {
-            readonly fields: {
-              readonly createdAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly expiresAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly id: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly identifier: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly updatedAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly value: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-            };
-            readonly relations: Record<string, never>;
-            readonly storage: {
-              readonly table: 'verification';
-              readonly namespaceId: 'public';
-              readonly fields: {
-                readonly createdAt: { readonly column: 'createdAt' };
-                readonly expiresAt: { readonly column: 'expiresAt' };
-                readonly id: { readonly column: 'id' };
-                readonly identifier: { readonly column: 'identifier' };
-                readonly updatedAt: { readonly column: 'updatedAt' };
-                readonly value: { readonly column: 'value' };
-              };
-            };
-          };
         };
         readonly enum: {
-          readonly AlcoholHabit: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'Never'; readonly value: 'never' },
-              { readonly name: 'Occasionally'; readonly value: 'occasionally' },
-              { readonly name: 'Regularly'; readonly value: 'regularly' },
-            ];
-          };
-          readonly CleanlinessLevel: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'VeryTidy'; readonly value: 'very_tidy' },
-              { readonly name: 'Average'; readonly value: 'average' },
-              { readonly name: 'Relaxed'; readonly value: 'relaxed' },
-            ];
-          };
           readonly FairPriceLabel: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
@@ -2926,22 +1784,6 @@ type ContractBase = Omit<
               { readonly name: 'Full'; readonly value: 'full' },
             ];
           };
-          readonly GuestFrequency: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'Never'; readonly value: 'never' },
-              { readonly name: 'Sometimes'; readonly value: 'sometimes' },
-              { readonly name: 'Often'; readonly value: 'often' },
-            ];
-          };
-          readonly LateNightActivity: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'Rarely'; readonly value: 'rarely' },
-              { readonly name: 'Sometimes'; readonly value: 'sometimes' },
-              { readonly name: 'Often'; readonly value: 'often' },
-            ];
-          };
           readonly ListingStatus: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
@@ -2957,14 +1799,6 @@ type ContractBase = Omit<
             readonly members: readonly [
               { readonly name: 'Image'; readonly value: 'image' },
               { readonly name: 'Video'; readonly value: 'video' },
-            ];
-          };
-          readonly OccupationType: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'Student'; readonly value: 'student' },
-              { readonly name: 'Working'; readonly value: 'working' },
-              { readonly name: 'WorkFromHome'; readonly value: 'work_from_home' },
             ];
           };
           readonly ParkingType: {
@@ -2991,14 +1825,6 @@ type ContractBase = Omit<
               { readonly name: 'Failed'; readonly value: 'failed' },
             ];
           };
-          readonly PetPreference: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'HavePet'; readonly value: 'have_pet' },
-              { readonly name: 'FineWithPets'; readonly value: 'fine_with_pets' },
-              { readonly name: 'NotOkay'; readonly value: 'not_okay' },
-            ];
-          };
           readonly PropertyType: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
@@ -3017,46 +1843,15 @@ type ContractBase = Omit<
               { readonly name: 'Other'; readonly value: 'other' },
             ];
           };
-          readonly RoommateQuestion: {
+          readonly UserRole: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
-              { readonly name: 'Smoking'; readonly value: 'smoking' },
-              { readonly name: 'Alcohol'; readonly value: 'alcohol' },
-              { readonly name: 'SleepSchedule'; readonly value: 'sleep_schedule' },
-              { readonly name: 'LateNight'; readonly value: 'late_night' },
-              { readonly name: 'Guests'; readonly value: 'guests' },
-              { readonly name: 'Cleanliness'; readonly value: 'cleanliness' },
-              { readonly name: 'Pets'; readonly value: 'pets' },
-            ];
-          };
-          readonly SleepSchedule: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'EarlySleeper'; readonly value: 'early_sleeper' },
-              { readonly name: 'Normal'; readonly value: 'normal' },
-              { readonly name: 'NightOwl'; readonly value: 'night_owl' },
-            ];
-          };
-          readonly SmokingHabit: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'Never'; readonly value: 'never' },
-              { readonly name: 'OutsideOnly'; readonly value: 'outside_only' },
-              { readonly name: 'Yes'; readonly value: 'yes' },
+              { readonly name: 'User'; readonly value: 'user' },
+              { readonly name: 'Admin'; readonly value: 'admin' },
             ];
           };
         };
         readonly enumMemberTypes?: {
-          readonly AlcoholHabit: readonly [
-            { readonly name: 'Never'; readonly value: 'never' },
-            { readonly name: 'Occasionally'; readonly value: 'occasionally' },
-            { readonly name: 'Regularly'; readonly value: 'regularly' },
-          ];
-          readonly CleanlinessLevel: readonly [
-            { readonly name: 'VeryTidy'; readonly value: 'very_tidy' },
-            { readonly name: 'Average'; readonly value: 'average' },
-            { readonly name: 'Relaxed'; readonly value: 'relaxed' },
-          ];
           readonly FairPriceLabel: readonly [
             { readonly name: 'Below'; readonly value: 'below' },
             { readonly name: 'Fair'; readonly value: 'fair' },
@@ -3068,16 +1863,6 @@ type ContractBase = Omit<
             { readonly name: 'Semi'; readonly value: 'semi' },
             { readonly name: 'Full'; readonly value: 'full' },
           ];
-          readonly GuestFrequency: readonly [
-            { readonly name: 'Never'; readonly value: 'never' },
-            { readonly name: 'Sometimes'; readonly value: 'sometimes' },
-            { readonly name: 'Often'; readonly value: 'often' },
-          ];
-          readonly LateNightActivity: readonly [
-            { readonly name: 'Rarely'; readonly value: 'rarely' },
-            { readonly name: 'Sometimes'; readonly value: 'sometimes' },
-            { readonly name: 'Often'; readonly value: 'often' },
-          ];
           readonly ListingStatus: readonly [
             { readonly name: 'PendingPayment'; readonly value: 'pending_payment' },
             { readonly name: 'Active'; readonly value: 'active' },
@@ -3088,11 +1873,6 @@ type ContractBase = Omit<
           readonly MediaType: readonly [
             { readonly name: 'Image'; readonly value: 'image' },
             { readonly name: 'Video'; readonly value: 'video' },
-          ];
-          readonly OccupationType: readonly [
-            { readonly name: 'Student'; readonly value: 'student' },
-            { readonly name: 'Working'; readonly value: 'working' },
-            { readonly name: 'WorkFromHome'; readonly value: 'work_from_home' },
           ];
           readonly ParkingType: readonly [
             { readonly name: 'None'; readonly value: 'none' },
@@ -3109,11 +1889,6 @@ type ContractBase = Omit<
             { readonly name: 'Success'; readonly value: 'success' },
             { readonly name: 'Failed'; readonly value: 'failed' },
           ];
-          readonly PetPreference: readonly [
-            { readonly name: 'HavePet'; readonly value: 'have_pet' },
-            { readonly name: 'FineWithPets'; readonly value: 'fine_with_pets' },
-            { readonly name: 'NotOkay'; readonly value: 'not_okay' },
-          ];
           readonly PropertyType: readonly [
             { readonly name: 'Room'; readonly value: 'room' },
             { readonly name: 'Flat'; readonly value: 'flat' },
@@ -3126,24 +1901,9 @@ type ContractBase = Omit<
             { readonly name: 'Scam'; readonly value: 'scam' },
             { readonly name: 'Other'; readonly value: 'other' },
           ];
-          readonly RoommateQuestion: readonly [
-            { readonly name: 'Smoking'; readonly value: 'smoking' },
-            { readonly name: 'Alcohol'; readonly value: 'alcohol' },
-            { readonly name: 'SleepSchedule'; readonly value: 'sleep_schedule' },
-            { readonly name: 'LateNight'; readonly value: 'late_night' },
-            { readonly name: 'Guests'; readonly value: 'guests' },
-            { readonly name: 'Cleanliness'; readonly value: 'cleanliness' },
-            { readonly name: 'Pets'; readonly value: 'pets' },
-          ];
-          readonly SleepSchedule: readonly [
-            { readonly name: 'EarlySleeper'; readonly value: 'early_sleeper' },
-            { readonly name: 'Normal'; readonly value: 'normal' },
-            { readonly name: 'NightOwl'; readonly value: 'night_owl' },
-          ];
-          readonly SmokingHabit: readonly [
-            { readonly name: 'Never'; readonly value: 'never' },
-            { readonly name: 'OutsideOnly'; readonly value: 'outside_only' },
-            { readonly name: 'Yes'; readonly value: 'yes' },
+          readonly UserRole: readonly [
+            { readonly name: 'User'; readonly value: 'user' },
+            { readonly name: 'Admin'; readonly value: 'admin' },
           ];
         };
       };
@@ -3206,8 +1966,8 @@ type ContractBase = Omit<
           };
         },
         {
-          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
-          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onCreate: { readonly id: 'instantNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'instantNow'; readonly kind: 'generator' };
           readonly ref: {
             readonly entry: 'listings';
             readonly field: 'updatedAt';
@@ -3223,8 +1983,8 @@ type ContractBase = Omit<
           };
         },
         {
-          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
-          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onCreate: { readonly id: 'instantNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'instantNow'; readonly kind: 'generator' };
           readonly ref: {
             readonly entry: 'payments';
             readonly field: 'updatedAt';
@@ -3242,16 +2002,16 @@ type ContractBase = Omit<
         {
           readonly onCreate: { readonly id: 'uuidv4'; readonly kind: 'generator' };
           readonly ref: {
-            readonly entry: 'roommate_profiles';
+            readonly entry: 'users';
             readonly field: 'id';
             readonly namespace: 'public';
           };
         },
         {
-          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
-          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onCreate: { readonly id: 'instantNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'instantNow'; readonly kind: 'generator' };
           readonly ref: {
-            readonly entry: 'roommate_profiles';
+            readonly entry: 'users';
             readonly field: 'updatedAt';
             readonly namespace: 'public';
           };
