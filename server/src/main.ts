@@ -4,6 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { clerkMiddleware } from '@clerk/express';
 import { AppModule } from './app.module.js';
 import { clerkConfig } from './clerk/clerk.js';
+import { env } from './env.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -15,7 +16,7 @@ async function bootstrap() {
   // It never rejects a request, so public routes stay open.
   app.use(clerkMiddleware(clerkConfig));
 
-  await app.listen(process.env['PORT'] ?? 3000);
+ await app.listen(env.port);
 }
 
 bootstrap();
