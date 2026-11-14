@@ -7,18 +7,18 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { and } from '@prisma/orm-postgres/orm-client';
-import type { LocalUser } from '../auth/guard/guard.guard.js';
+import type { LocalUser } from '../auth/types/local-user.type.js';
 import { db } from '../prisma/db.js';
 import { UsersService } from '../users/users.service.js';
+import type { CreateListingDto } from './dto/create-listing.dto.js';
+import type { SearchListingsDto } from './dto/search-listings.dto.js';
+import type { UpdateListingDto } from './dto/update-listing.dto.js';
+import type { WithFacilityLinks } from './interfaces/with-facility-links.interface.js';
 import {
+  DEFAULT_PAGE_SIZE,
   LISTING_DURATION_DAYS,
   MY_LISTINGS_LIMIT,
 } from './listings.constants.js';
-import type {
-  CreateListingInput,
-  SearchListingsQuery,
-  UpdateListingInput,
-} from './listings.schemas.js';
 
 // Makes text safe to put inside a LIKE pattern: "50%" must not mean "50 and anything".
 function escapeLike(text: string): string {
@@ -38,7 +38,7 @@ export class ListingsService {
   // Create
   // -------------------------------------------------------------------------
 
-  async create(user: LocalUser, input: CreateListingInput) {
+  async create(user: LocalUser, input: CreateListingDto) {
     const facilityIds = [...new Set(input.facilityIds ?? [])];
     await this.assertFacilitiesExist(facilityIds);
 
@@ -110,7 +110,22 @@ export class ListingsService {
   // -------------------------------------------------------------------------
 
   // Public search page. Only listings that are active and not expired.
-  async search(query: SearchListingsQuery) {
+  async search(query: SearchListingsDto) {
+    // Missing query values fall back to defaults.
+    const sort = query.sort ?? 'newest';
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
+
+    if (
+      query.minPrice !== undefined &&
+      query.maxPrice !== undefined &&
+      query.minPrice > query.maxPrice
+    ) {
+      throw new BadRequestException(
+        'minPrice must not be greater than maxPrice',
+      );
+    }
+
     const now = Temporal.Now.instant();
 
     const filtered = db.orm.public.Listing.where((l) => {
@@ -144,16 +159,16 @@ export class ListingsService {
     // between pages.
     const items = await filtered
       .orderBy(
-        query.sort === 'price_asc'
+        sort === 'price_asc'
           ? [(l) => l.rentPrice.asc(), (l) => l.id.asc()]
-          : query.sort === 'price_desc'
+          : sort === 'price_desc'
             ? [(l) => l.rentPrice.desc(), (l) => l.id.asc()]
             : [(l) => l.createdAt.desc(), (l) => l.id.asc()],
       )
       // Each card shows only the first photo.
       .include('media', (m) => m.orderBy((x) => x.sortOrder.asc()).limit(1))
-      .limit(query.pageSize)
-      .offset((query.page - 1) * query.pageSize)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
       .all();
 
     return {
@@ -161,10 +176,10 @@ export class ListingsService {
         ...listing,
         cover: media[0] ?? null,
       })),
-      page: query.page,
-      pageSize: query.pageSize,
+      page,
+      pageSize,
       total,
-      totalPages: Math.ceil(total / query.pageSize),
+      totalPages: Math.ceil(total / pageSize),
     };
   }
 
@@ -199,7 +214,7 @@ export class ListingsService {
   // Update / delete (owner only)
   // -------------------------------------------------------------------------
 
-  async update(user: LocalUser, id: string, input: UpdateListingInput) {
+  async update(user: LocalUser, id: string, input: UpdateListingDto) {
     await this.assertOwner(user, id);
 
     const facilityIds = input.facilityIds
@@ -210,15 +225,19 @@ export class ListingsService {
     }
 
     // Only the fields the owner actually sent. Things like status or fair price are not in the
-    // schema, so they can never get here.
+    // DTO, so the validation step rejects them before they get here.
     const {
       facilityIds: _facilityIds,
       media,
       availableFrom,
       ...fields
     } = input;
+    // The validation step can leave unsent fields as undefined. Keep only the real values.
+    const sent = Object.fromEntries(
+      Object.entries(fields).filter(([, value]) => value !== undefined),
+    );
     const changes = {
-      ...fields,
+      ...sent,
       ...(availableFrom !== undefined && {
         availableFrom: Temporal.PlainDate.from(availableFrom),
       }),
@@ -327,11 +346,7 @@ export class ListingsService {
   }
 
   // Turns the join rows into a plain list: facilities: [{ id, name }].
-  private toView<
-    Row extends {
-      facilities: Array<{ facility: { id: string; name: string } | null }>;
-    },
-  >(row: Row) {
+  private toView<Row extends WithFacilityLinks>(row: Row) {
     return {
       ...row,
       facilities: row.facilities.flatMap((link) =>

@@ -6,23 +6,18 @@ import {
   HttpCode,
   Inject,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorator/current-user.decorator.js';
-import { ClerkAuthGuard, type LocalUser } from '../auth/guard/guard.guard.js';
-import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
-import {
-  type CreateListingInput,
-  type SearchListingsQuery,
-  type UpdateListingInput,
-  createListingSchema,
-  listingIdSchema,
-  searchListingsSchema,
-  updateListingSchema,
-} from './listings.schemas.js';
+import { ClerkAuthGuard } from '../auth/guard/guard.guard.js';
+import type { LocalUser } from '../auth/types/local-user.type.js';
+import { CreateListingDto } from './dto/create-listing.dto.js';
+import { SearchListingsDto } from './dto/search-listings.dto.js';
+import { UpdateListingDto } from './dto/update-listing.dto.js';
 import { ListingsService } from './listings.service.js';
 
 // Every route here starts with /listings.
@@ -34,10 +29,7 @@ export class ListingsController {
 
   // GET /listings?city=Banepa&maxPrice=15000&sort=price_asc   (public)
   @Get()
-  search(
-    @Query(new ZodValidationPipe(searchListingsSchema))
-    query: SearchListingsQuery,
-  ) {
+  search(@Query() query: SearchListingsDto) {
     return this.listings.search(query);
   }
 
@@ -51,17 +43,14 @@ export class ListingsController {
 
   // GET /listings/:id   (public)
   @Get(':id')
-  findOne(@Param('id', new ZodValidationPipe(listingIdSchema)) id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.listings.findPublic(id);
   }
 
   // POST /listings   (login needed)
   @Post()
   @UseGuards(ClerkAuthGuard)
-  create(
-    @CurrentUser() user: LocalUser,
-    @Body(new ZodValidationPipe(createListingSchema)) body: CreateListingInput,
-  ) {
+  create(@CurrentUser() user: LocalUser, @Body() body: CreateListingDto) {
     return this.listings.create(user, body);
   }
 
@@ -70,8 +59,8 @@ export class ListingsController {
   @UseGuards(ClerkAuthGuard)
   update(
     @CurrentUser() user: LocalUser,
-    @Param('id', new ZodValidationPipe(listingIdSchema)) id: string,
-    @Body(new ZodValidationPipe(updateListingSchema)) body: UpdateListingInput,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateListingDto,
   ) {
     return this.listings.update(user, id, body);
   }
@@ -82,7 +71,7 @@ export class ListingsController {
   @UseGuards(ClerkAuthGuard)
   async remove(
     @CurrentUser() user: LocalUser,
-    @Param('id', new ZodValidationPipe(listingIdSchema)) id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     await this.listings.remove(user, id);
   }

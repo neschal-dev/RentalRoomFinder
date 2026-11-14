@@ -6,15 +6,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { getAuth } from '@clerk/express';
-import type { Request } from 'express';
 import { UsersService } from '../../users/users.service.js';
-
-
-// The user row from our own database.
-export type LocalUser = Awaited<ReturnType<UsersService['findOrCreateByClerkId']>>;
-
-// A normal request plus the logged-in user our guard attaches to it.
-export type AuthedRequest = Request & { currentUser: LocalUser };
+import type { AuthedRequest } from '../types/authed-request.type.js';
 
 @Injectable()
 export class ClerkAuthGuard implements CanActivate {

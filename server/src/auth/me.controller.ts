@@ -1,7 +1,7 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ClerkAuthGuard , type LocalUser} from './guard/guard.guard.js';
+import { ClerkAuthGuard } from './guard/guard.guard.js';
 import { CurrentUser } from './decorator/current-user.decorator.js';
-
+import type { LocalUser } from './types/local-user.type.js';
 
 @Controller('me')
 export class MeController {

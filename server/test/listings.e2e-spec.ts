@@ -133,11 +133,12 @@ describe('creating a listing', () => {
       )
       .expect(400);
 
-    const fields = res.body.errors.map((e: { field: string }) => e.field);
-    expect(fields).toContain('rentPrice'); // too cheap
-    expect(fields).toContain('city'); // not a supported city
-    expect(fields).toContain('latitude'); // not in Nepal
-    expect(JSON.stringify(res.body.errors)).toContain('status'); // owner may not set status
+    // Nest answers { message: [ "rentPrice must not be less than 500", ... ] }.
+    const messages: string[] = res.body.message;
+    expect(messages.some((m) => m.startsWith('rentPrice'))).toBe(true); // too cheap
+    expect(messages.some((m) => m.startsWith('city'))).toBe(true); // not a supported city
+    expect(messages.some((m) => m.startsWith('latitude'))).toBe(true); // not in Nepal
+    expect(messages).toContain('property status should not exist'); // owner may not set status
   });
 
   it('puts the first post of a verified user live for free', async () => {
