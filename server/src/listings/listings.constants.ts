@@ -1,0 +1,21 @@
+// Cities where FindMeAPlace is available in the first release.
+// To open a new city, add its name here. Nothing else needs to change.
+export const SUPPORTED_CITIES = ['Kathmandu', 'Bhaktapur', 'Banepa'] as const;
+
+// How long a listing stays visible after it becomes active.
+export const LISTING_DURATION_DAYS = 30;
+
+// Search results per page.
+export const DEFAULT_PAGE_SIZE = 12;
+export const MAX_PAGE_SIZE = 50;
+
+// The most listings "my listings" returns in one go.
+export const MY_LISTINGS_LIMIT = 100;
+
+// Rough box around Nepal. Catches swapped or nonsense coordinates early.
+export const NEPAL_BOUNDS = {
+  minLatitude: 26.3,
+  maxLatitude: 30.5,
+  minLongitude: 80.0,
+  maxLongitude: 88.3,
+} as const;

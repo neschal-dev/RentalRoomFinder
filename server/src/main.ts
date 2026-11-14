@@ -19,4 +19,4 @@ async function bootstrap() {
  await app.listen(env.port);
 }
 
-bootstrap();
+void bootstrap();
