@@ -253,6 +253,32 @@ describe('creating a listing', () => {
   });
 });
 
+describe('upload signature', () => {
+  it('needs a login, and rejects an unknown file type', async () => {
+    await makeUser('uploader', false);
+    await http()
+      .post('/media/signature')
+      .send({ mediaType: 'image' })
+      .expect(401);
+    await http()
+      .post('/media/signature')
+      .set(as('uploader'))
+      .send({ mediaType: 'audio' })
+      .expect(400);
+  });
+
+  it('gives a logged-in user a signature, without the secret', async () => {
+    const res = await http()
+      .post('/media/signature')
+      .set(as('uploader'))
+      .send({ mediaType: 'video' })
+      .expect(200);
+    expect(res.body.uploadUrl).toMatch(/\/video\/upload$/);
+    expect(res.body.signature).toMatch(/^[0-9a-f]{40}$/);
+    expect(res.body).not.toHaveProperty('apiSecret');
+  });
+});
+
 describe('searching and viewing', () => {
   // A small known set of listings, each by its own verified owner so each one is active.
   const seed = [

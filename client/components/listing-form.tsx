@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { createApi } from "@/lib/api";
+import { uploadMedia } from "@/lib/upload";
 import {
   CITIES,
   CITY_CENTERS,
@@ -14,6 +15,7 @@ import {
   errorLines,
   type City,
   type Facility,
+  type MediaType,
   type MyListing,
 } from "@/lib/listings";
 
@@ -64,12 +66,11 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
   const [facilityIds, setFacilityIds] = useState<string[]>(
     existing?.facilities.map((f) => f.id) ?? [],
   );
-  // Photos are web addresses for now. Uploading comes later.
-  const [photoUrls, setPhotoUrls] = useState<string[]>(
-    existing?.media
-      .filter((m) => m.mediaType === "image")
-      .map((m) => m.url) ?? [""],
+  // Photos and videos already uploaded to Cloudinary. We keep only where each one can be found.
+  const [media, setMedia] = useState<{ url: string; mediaType: MediaType }[]>(
+    existing?.media.map((m) => ({ url: m.url, mediaType: m.mediaType })) ?? [],
   );
+  const [uploading, setUploading] = useState(false);
 
   const [allFacilities, setAllFacilities] = useState<Facility[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -111,21 +112,36 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
     );
   }
 
+  // Uploads the chosen files one after another and adds them to the list.
+  async function addFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setErrors([]);
+    setUploading(true);
+    const added: { url: string; mediaType: MediaType }[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        if (media.length + added.length >= 15) {
+          setErrors(["A listing can have at most 15 photos and videos."]);
+          break;
+        }
+        added.push(await uploadMedia(api, file));
+      }
+    } catch (error) {
+      setErrors(
+        error instanceof Error && !("response" in error)
+          ? [error.message]
+          : errorLines(error),
+      );
+    }
+    // Keep what uploaded fine, even if a later file failed.
+    setMedia((list) => [...list, ...added]);
+    setUploading(false);
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setErrors([]);
     setSaving(true);
-
-    // Empty photo boxes are ignored. Videos the owner already has are kept as they are.
-    const media = [
-      ...photoUrls
-        .map((u) => u.trim())
-        .filter(Boolean)
-        .map((url) => ({ url, mediaType: "image" })),
-      ...(existing?.media
-        .filter((m) => m.mediaType === "video")
-        .map((m) => ({ url: m.url, mediaType: "video" })) ?? []),
-    ];
 
     const body = {
       title,
@@ -402,40 +418,67 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
         )}
       </fieldset>
 
-      <fieldset className="space-y-2">
-        <legend className="mb-1 text-sm">
-          Photos (web addresses, up to 10)
-        </legend>
-        {photoUrls.map((url, index) => (
-          <input
-            key={index}
-            type="url"
-            placeholder="https://…"
-            value={url}
-            onChange={(e) =>
-              setPhotoUrls((list) =>
-                list.map((u, i) => (i === index ? e.target.value : u)),
-              )
-            }
-            className={inputClass}
-          />
-        ))}
-        {photoUrls.length < 10 && (
-          <button
-            type="button"
-            onClick={() => setPhotoUrls((list) => [...list, ""])}
-            className="cursor-pointer text-sm underline"
-          >
-            + Add another photo
-          </button>
+      <fieldset className="space-y-3">
+        <legend className="mb-1 text-sm">Photos and videos (up to 15)</legend>
+
+        {media.length > 0 && (
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {media.map((item, index) => (
+              <li key={item.url} className="relative">
+                {item.mediaType === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.url}
+                    alt=""
+                    className="h-24 w-full rounded-md object-cover"
+                  />
+                ) : (
+                  <video
+                    src={item.url}
+                    className="h-24 w-full rounded-md object-cover"
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMedia((list) => list.filter((_, i) => i !== index))
+                  }
+                  className="absolute right-1 top-1 cursor-pointer rounded-full bg-black/70 px-2 text-xs text-white"
+                  aria-label="Remove"
+                >
+                  ✕
+                </button>
+                {index === 0 && (
+                  <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 text-xs text-white">
+                    Cover
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
+
+        {media.length < 15 && (
+          <input
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            disabled={uploading}
+            onChange={(e) => {
+              void addFiles(e.target.files);
+              e.target.value = ""; // so the same file can be picked again
+            }}
+            className="text-sm"
+          />
+        )}
+        {uploading && <p className="text-sm text-zinc-500">Uploading…</p>}
         <p className="text-xs text-zinc-500">
-          Photo upload from your device is coming in a later update.
+          Photos up to 10 MB, videos up to 100 MB. The first photo is the cover.
         </p>
       </fieldset>
 
       <button
-        disabled={saving || !isLoaded}
+        disabled={saving || uploading || !isLoaded}
         className="h-11 cursor-pointer rounded-full bg-black px-8 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
       >
         {saving ? "Saving…" : existing ? "Save changes" : "Post listing"}
