@@ -16,7 +16,7 @@ async function bootstrap() {
   // It never rejects a request, so public routes stay open.
   app.use(clerkMiddleware(clerkConfig));
 
- await app.listen(env.port);
+  await app.listen(env.port);
 }
 
 void bootstrap();
