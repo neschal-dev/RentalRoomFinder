@@ -14,6 +14,9 @@ export function SiteHeader() {
           streams in behind a Suspense boundary (required by Cache Components). */}
       <Suspense fallback={<div className="h-10 w-40" />}>
         <nav className="flex items-center gap-4">
+          <Link href="/listings" className="text-sm font-medium">
+            Find a place
+          </Link>
           {/* Visitors who are not logged in see these two buttons. */}
           <Show when="signed-out">
             <SignInButton mode="redirect">
@@ -30,6 +33,9 @@ export function SiteHeader() {
 
           {/* Logged-in users see a link to their account and the avatar menu (with sign out). */}
           <Show when="signed-in">
+            <Link href="/account/listings" className="text-sm font-medium">
+              My listings
+            </Link>
             <Link href="/account" className="text-sm font-medium">
               My account
             </Link>

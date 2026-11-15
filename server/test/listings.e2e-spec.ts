@@ -410,6 +410,13 @@ describe('searching and viewing', () => {
     await http().get('/listings?page=999999999').expect(400);
   });
 
+  it('lists the facilities for the listing form, A to Z', async () => {
+    const res = await http().get('/facilities').expect(200);
+    const names = res.body.map((f: { name: string }) => f.name);
+    expect(names.length).toBeGreaterThan(0);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+  });
+
   it('never shows internal fields to the public', async () => {
     const internal = [
       'ownerId',

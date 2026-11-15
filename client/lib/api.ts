@@ -32,3 +32,6 @@ export type MeResponse = {
   phoneVerified: boolean;
   freePostUsed: boolean;
 };
+
+// Address used by server components, which call the API without a login (public pages).
+export const API_URL = baseURL;
