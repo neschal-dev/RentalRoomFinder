@@ -13,12 +13,13 @@ import { UsersService } from '../users/users.service.js';
 import type { CreateListingDto } from './dto/create-listing.dto.js';
 import type { SearchListingsDto } from './dto/search-listings.dto.js';
 import type { UpdateListingDto } from './dto/update-listing.dto.js';
-import type { WithFacilityLinks } from './interfaces/with-facility-links.interface.js';
 import {
+  CLEARABLE_FIELDS,
   DEFAULT_PAGE_SIZE,
   LISTING_DURATION_DAYS,
   MY_LISTINGS_LIMIT,
 } from './listings.constants.js';
+import { toOwnerView, toPublicCard, toPublicDetail } from './listings.views.js';
 
 // Makes text safe to put inside a LIKE pattern: "50%" must not mean "50 and anything".
 function escapeLike(text: string): string {
@@ -172,9 +173,9 @@ export class ListingsService {
       .all();
 
     return {
-      items: items.map(({ media, ...listing }) => ({
-        ...listing,
-        cover: media[0] ?? null,
+      items: items.map((row) => ({
+        ...toPublicCard(row),
+        cover: row.media[0] ?? null,
       })),
       page,
       pageSize,
@@ -184,16 +185,21 @@ export class ListingsService {
   }
 
   // One listing page for the public. Hidden, expired and removed listings look like they do not exist.
+  // One query loads the listing and its relations together, with the visibility rules in the filter,
+  // so the listing cannot change status between a check and a second read.
   async findPublic(id: string) {
     const now = Temporal.Now.instant();
-    const found = await db.orm.public.Listing.where((l) =>
+    const row = await db.orm.public.Listing.where((l) =>
       and(l.id.eq(id), l.status.eq('active'), l.expiresAt.gt(now)),
-    ).first();
+    )
+      .include('media', (m) => m.orderBy((x) => x.sortOrder.asc()))
+      .include('facilities', (f) => f.include('facility'))
+      .first();
 
-    if (!found) {
+    if (!row) {
       throw new NotFoundException('Listing not found');
     }
-    return this.getFull(id);
+    return toPublicDetail(row);
   }
 
   // Everything the logged-in user has posted, in every status except removed.
@@ -207,7 +213,7 @@ export class ListingsService {
       .limit(MY_LISTINGS_LIMIT)
       .all();
 
-    return rows.map((row) => this.toView(row));
+    return rows.map((row) => toOwnerView(row));
   }
 
   // -------------------------------------------------------------------------
@@ -215,6 +221,14 @@ export class ListingsService {
   // -------------------------------------------------------------------------
 
   async update(user: LocalUser, id: string, input: UpdateListingDto) {
+    // PartialType makes every field optional, and "optional" also lets null through validation.
+    // Reject null for fields that must always have a value, so it never reaches the database.
+    for (const [key, value] of Object.entries(input)) {
+      if (value === null && !CLEARABLE_FIELDS.includes(key)) {
+        throw new BadRequestException(`${key} must not be null`);
+      }
+    }
+
     await this.assertOwner(user, id);
 
     const facilityIds = input.facilityIds
@@ -342,16 +356,6 @@ export class ListingsService {
     if (!row) {
       throw new NotFoundException('Listing not found');
     }
-    return this.toView(row);
-  }
-
-  // Turns the join rows into a plain list: facilities: [{ id, name }].
-  private toView<Row extends WithFacilityLinks>(row: Row) {
-    return {
-      ...row,
-      facilities: row.facilities.flatMap((link) =>
-        link.facility ? [link.facility] : [],
-      ),
-    };
+    return toOwnerView(row);
   }
 }

@@ -14,6 +14,7 @@ import { toBoolean } from '../../common/transformers/to-boolean.transformer.js';
 import { trim } from '../../common/transformers/trim.transformer.js';
 import {
   FURNISHINGS,
+  MAX_PAGE,
   MAX_PAGE_SIZE,
   PARKINGS,
   PROPERTY_TYPES,
@@ -98,6 +99,7 @@ export class SearchListingsDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(MAX_PAGE)
   page?: number;
 
   @IsOptional()

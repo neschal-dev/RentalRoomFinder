@@ -407,6 +407,29 @@ describe('searching and viewing', () => {
     await http().get('/listings?minPrice=9000&maxPrice=100').expect(400);
     await http().get('/listings?pageSize=500').expect(400);
     await http().get('/listings?city=Mars').expect(400);
+    await http().get('/listings?page=999999999').expect(400);
+  });
+
+  it('never shows internal fields to the public', async () => {
+    const internal = [
+      'ownerId',
+      'status',
+      'expiresAt',
+      'updatedAt',
+      'nearestNodeId',
+      'benchmarkPrice',
+      'fairPriceLabel',
+      'comparableCount',
+      'fairPriceUpdatedAt',
+    ];
+    const detail = await http().get(`/listings/${ids['seed-1']}`).expect(200);
+    const search = await http().get('/listings').expect(200);
+    for (const key of internal) {
+      expect(detail.body).not.toHaveProperty(key);
+      expect(search.body.items[0]).not.toHaveProperty(key);
+    }
+    expect(detail.body).toHaveProperty('media');
+    expect(detail.body).toHaveProperty('facilities');
   });
 
   it('shows one live listing to anyone', async () => {
@@ -474,6 +497,9 @@ describe('editing and deleting', () => {
 
   it('lets the owner change some fields and leaves the others alone', async () => {
     const before = await http().get(`/listings/${listingId}`).expect(200);
+    const beforeUpdatedAt = (await db.orm.public.Listing.where({
+      id: listingId,
+    }).first())!.updatedAt.toString();
 
     const res = await http()
       .patch(`/listings/${listingId}`)
@@ -497,7 +523,7 @@ describe('editing and deleting', () => {
     ]);
     // The "last changed" time moved forward.
     expect(Date.parse(res.body.updatedAt)).toBeGreaterThan(
-      Date.parse(before.body.updatedAt),
+      Date.parse(beforeUpdatedAt),
     );
   });
 
@@ -543,6 +569,25 @@ describe('editing and deleting', () => {
       .set(as('owner'))
       .send({ fairPriceLabel: 'below' })
       .expect(400);
+  });
+
+  it('answers 400, not 500, when a required field is sent as null', async () => {
+    await http()
+      .patch(`/listings/${listingId}`)
+      .set(as('owner'))
+      .send({ availableFrom: null })
+      .expect(400);
+    await http()
+      .patch(`/listings/${listingId}`)
+      .set(as('owner'))
+      .send({ title: null })
+      .expect(400);
+    // sizeSqft is optional, so the owner may clear it.
+    await http()
+      .patch(`/listings/${listingId}`)
+      .set(as('owner'))
+      .send({ sizeSqft: null })
+      .expect(200);
   });
 
   it('keeps strangers out', async () => {
