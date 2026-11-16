@@ -1,21 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ChevronLeft, ChevronRight, SearchX } from "lucide-react";
-import { FiltersToggle } from "@/components/filters-toggle";
 import { ListingCardView } from "@/components/listing-card";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/field";
+import { SearchBar } from "@/components/search-bar";
+import { buttonVariants } from "@/components/ui/button";
 import { fetchSearch } from "@/lib/server-data";
-import {
-  CITIES,
-  FURNISHINGS,
-  FURNISHING_LABELS,
-  PARKINGS,
-  PARKING_LABELS,
-  PROPERTY_TYPES,
-  capitalize,
-} from "@/lib/listings";
+import { capitalize } from "@/lib/listings";
 
 export const metadata = { title: "Find a place · FindMeAPlace" };
 
@@ -42,36 +32,29 @@ function one(params: Params, key: string): string {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 }
 
-// The page frame shows at once. The results stream in behind Suspense,
+// The search results. The frame shows at once; the results stream in behind Suspense,
 // because they depend on the URL (searchParams), which is only known at request time.
 export default function ListingsPage({ searchParams }: PageProps<"/listings">) {
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-16 pt-6 sm:px-6">
       <Suspense
         fallback={<p className="text-muted-foreground">Loading places…</p>}
       >
-        <SearchContent searchParams={searchParams} />
+        <Results searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function SearchContent({
-  searchParams,
-}: {
-  searchParams: Promise<Params>;
-}) {
+async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams;
 
-  // Pass on only the filters that have a value.
-  const query = new URLSearchParams();
+  // Keep only the filters that have a value.
+  const values: Record<string, string> = {};
   for (const key of FILTER_KEYS) {
-    if (one(params, key)) query.set(key, one(params, key));
+    if (one(params, key)) values[key] = one(params, key);
   }
-  const activeFilters = FILTER_KEYS.filter(
-    (k) => k !== "page" && k !== "sort" && one(params, k),
-  ).length;
-
+  const query = new URLSearchParams(values);
   const result = await fetchSearch(query);
 
   // Link to another page, keeping the filters.
@@ -81,215 +64,92 @@ async function SearchContent({
     return `/listings?${next}`;
   };
 
+  // "Rooms in Banepa", "Flats", "Places to rent" ...
+  const kind = values.propertyType
+    ? `${capitalize(values.propertyType)}s`
+    : "Places";
+  const heading = values.city ? `${kind} in ${values.city}` : `${kind} to rent`;
+
   return (
     <>
-      <div className="mb-6">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">
-          {one(params, "city")
-            ? `Places in ${one(params, "city")}`
-            : "Places to rent"}
+      <div className="mx-auto max-w-4xl">
+        <SearchBar values={values} />
+      </div>
+
+      <div className="mb-6 mt-8 flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+          {heading}
         </h1>
         {result.ok && (
-          <p className="mt-1 text-muted-foreground">
-            {result.data.total} {result.data.total === 1 ? "place" : "places"}{" "}
-            available
+          <p className="text-sm text-muted-foreground">
+            {result.data.total} {result.data.total === 1 ? "place" : "places"}
           </p>
         )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[17rem_1fr] md:items-start">
-        <FiltersToggle activeCount={activeFilters}>
-          {/* A plain HTML form: it sends the filters as ?city=...&maxPrice=... to this same page. */}
-          <Card className="md:sticky md:top-20">
-            <form method="GET" action="/listings" className="space-y-4 p-4">
-              <Field label="City">
-                <Select name="city" defaultValue={one(params, "city")}>
-                  <option value="">All cities</option>
-                  {CITIES.map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Area">
-                <Input
-                  name="area"
-                  defaultValue={one(params, "area")}
-                  placeholder="For example, Bazaar"
-                />
-              </Field>
-              <Field label="Type">
-                <Select
-                  name="propertyType"
-                  defaultValue={one(params, "propertyType")}
-                >
-                  <option value="">Any type</option>
-                  {PROPERTY_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {capitalize(t)}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Min rent">
-                  <Input
-                    name="minPrice"
-                    type="number"
-                    min={0}
-                    defaultValue={one(params, "minPrice")}
-                    placeholder="0"
-                  />
-                </Field>
-                <Field label="Max rent">
-                  <Input
-                    name="maxPrice"
-                    type="number"
-                    min={0}
-                    defaultValue={one(params, "maxPrice")}
-                    placeholder="Any"
-                  />
-                </Field>
-              </div>
-              <Field label="Bedrooms, at least">
-                <Input
-                  name="bedrooms"
-                  type="number"
-                  min={0}
-                  max={20}
-                  defaultValue={one(params, "bedrooms")}
-                  placeholder="Any"
-                />
-              </Field>
-              <Field label="Furnishing">
-                <Select
-                  name="furnishing"
-                  defaultValue={one(params, "furnishing")}
-                >
-                  <option value="">Any</option>
-                  {FURNISHINGS.map((f) => (
-                    <option key={f} value={f}>
-                      {FURNISHING_LABELS[f]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Parking">
-                <Select name="parking" defaultValue={one(params, "parking")}>
-                  <option value="">Any</option>
-                  {PARKINGS.map((p) => (
-                    <option key={p} value={p}>
-                      {PARKING_LABELS[p]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  name="petsAllowed"
-                  value="true"
-                  defaultChecked={one(params, "petsAllowed") === "true"}
-                  className="size-4 accent-primary"
-                />
-                Pets allowed
-              </label>
-              <Field label="Sort by">
-                <Select
-                  name="sort"
-                  defaultValue={one(params, "sort") || "newest"}
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="price_asc">Rent, low to high</option>
-                  <option value="price_desc">Rent, high to low</option>
-                </Select>
-              </Field>
-              <div className="flex items-center gap-3 pt-1">
-                <Button type="submit" className="flex-1">
-                  Show places
-                </Button>
+      {!result.ok && (
+        <p className="rounded-xl bg-danger-soft p-4 text-danger">
+          {result.message}
+        </p>
+      )}
+
+      {result.ok && result.data.items.length === 0 && (
+        <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
+          <SearchX
+            className="size-10 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <p className="font-display text-xl font-semibold">
+            No places match these filters
+          </p>
+          <p className="max-w-sm text-muted-foreground">
+            Try a higher rent, another city, or fewer filters.
+          </p>
+          <Link
+            href="/listings"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Clear filters
+          </Link>
+        </div>
+      )}
+
+      {result.ok && result.data.items.length > 0 && (
+        <>
+          <div className="grid gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {result.data.items.map((listing) => (
+              <ListingCardView key={listing.id} listing={listing} />
+            ))}
+          </div>
+
+          {result.data.totalPages > 1 && (
+            <nav
+              className="mt-12 flex items-center justify-center gap-4 text-sm"
+              aria-label="Pages"
+            >
+              {result.data.page > 1 && (
                 <Link
-                  href="/listings"
-                  className="text-sm font-medium underline underline-offset-4"
+                  href={pageHref(result.data.page - 1)}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
                 >
-                  Clear
+                  <ChevronLeft /> Previous
                 </Link>
-              </div>
-            </form>
-          </Card>
-        </FiltersToggle>
-
-        <section>
-          {!result.ok && (
-            <Card className="border-danger/40 bg-danger-soft p-4 text-danger">
-              {result.message}
-            </Card>
-          )}
-
-          {result.ok && result.data.items.length === 0 && (
-            <Card className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-              <SearchX
-                className="size-10 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <p className="font-display text-xl font-semibold">
-                No places match these filters
-              </p>
-              <p className="max-w-sm text-muted-foreground">
-                Try a wider rent range or a different city.
-              </p>
-              <Link
-                href="/listings"
-                className={buttonVariants({ variant: "outline" })}
-              >
-                Clear filters
-              </Link>
-            </Card>
-          )}
-
-          {result.ok && result.data.items.length > 0 && (
-            <>
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {result.data.items.map((listing) => (
-                  <ListingCardView key={listing.id} listing={listing} />
-                ))}
-              </div>
-
-              {result.data.totalPages > 1 && (
-                <nav
-                  className="mt-8 flex items-center justify-center gap-4 text-sm"
-                  aria-label="Pages"
-                >
-                  {result.data.page > 1 && (
-                    <Link
-                      href={pageHref(result.data.page - 1)}
-                      className={buttonVariants({
-                        variant: "outline",
-                        size: "sm",
-                      })}
-                    >
-                      <ChevronLeft /> Previous
-                    </Link>
-                  )}
-                  <span className="text-muted-foreground">
-                    Page {result.data.page} of {result.data.totalPages}
-                  </span>
-                  {result.data.page < result.data.totalPages && (
-                    <Link
-                      href={pageHref(result.data.page + 1)}
-                      className={buttonVariants({
-                        variant: "outline",
-                        size: "sm",
-                      })}
-                    >
-                      Next <ChevronRight />
-                    </Link>
-                  )}
-                </nav>
               )}
-            </>
+              <span className="text-muted-foreground">
+                Page {result.data.page} of {result.data.totalPages}
+              </span>
+              {result.data.page < result.data.totalPages && (
+                <Link
+                  href={pageHref(result.data.page + 1)}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  Next <ChevronRight />
+                </Link>
+              )}
+            </nav>
           )}
-        </section>
-      </div>
+        </>
+      )}
     </>
   );
 }

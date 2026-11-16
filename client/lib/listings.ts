@@ -131,3 +131,8 @@ export const PARKING_LABELS: Record<Parking, string> = {
   car: "Car parking",
   both: "Bike and car parking",
 };
+
+// True when a listing was posted in the last 7 days.
+export function isNew(createdAt: string): boolean {
+  return Date.now() - new Date(createdAt).getTime() < 7 * 24 * 60 * 60 * 1000;
+}

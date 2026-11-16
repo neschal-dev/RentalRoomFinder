@@ -69,7 +69,7 @@ const ROWS: Row[] = [
     parking: "bike",
     rentPrice: 6500,
     city: "Banepa",
-    area: "Near Banepa Hospital",
+    area: "Hospital Road",
     latitude: 27.6305,
     longitude: 85.5207,
     availableInDays: 5,
