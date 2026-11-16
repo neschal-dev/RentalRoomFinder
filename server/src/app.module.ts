@@ -7,9 +7,17 @@ import { ClerkModule } from './clerk/clerk.module.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { ListingsModule } from './listings/listings.module.js';
+import { MediaModule } from './media/media.module.js';
 
 @Module({
-  imports: [PrismaModule, ClerkModule, UsersModule, AuthModule, ListingsModule],
+  imports: [
+    PrismaModule,
+    ClerkModule,
+    UsersModule,
+    AuthModule,
+    ListingsModule,
+    MediaModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

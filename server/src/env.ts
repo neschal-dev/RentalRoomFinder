@@ -25,6 +25,21 @@ function readPort(): number {
   return port;
 }
 
+// CLOUDINARY_URL looks like cloudinary://<api_key>:<api_secret>@<cloud_name>.
+// We split it into its three parts. Stops the server if it does not have that shape.
+function readCloudinary() {
+  const raw = required('CLOUDINARY_URL');
+  if (!raw) return { cloudName: '', apiKey: '', apiSecret: '' };
+
+  const match = /^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/.exec(raw);
+  if (!match) {
+    throw new Error(
+      'CLOUDINARY_URL must look like cloudinary://<api_key>:<api_secret>@<cloud_name>',
+    );
+  }
+  return { apiKey: match[1]!, apiSecret: match[2]!, cloudName: match[3]! };
+}
+
 // Every setting the server needs, in one typed object. Use it as: env.databaseUrl
 export const env = {
   port: readPort(),
@@ -32,6 +47,7 @@ export const env = {
   clientUrl: required('CLIENT_URL'), // the Next.js app, used for CORS and Clerk tokens
   clerkPublishableKey: required('CLERK_PUBLISHABLE_KEY'),
   clerkSecretKey: required('CLERK_SECRET_KEY'),
+  cloudinary: readCloudinary(), // where photos and videos are stored
 };
 
 // All variables were checked above. If any is missing, stop now with one clear message.

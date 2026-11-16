@@ -202,6 +202,11 @@ export class ListingsService {
     return toPublicDetail(row);
   }
 
+  // The facilities an owner can tick on the listing form (WiFi, water ...), A to Z.
+  async findFacilities() {
+    return db.orm.public.Facility.orderBy((f) => f.name.asc()).all();
+  }
+
   // Everything the logged-in user has posted, in every status except removed.
   async findMine(user: LocalUser) {
     const rows = await db.orm.public.Listing.where((l) =>
