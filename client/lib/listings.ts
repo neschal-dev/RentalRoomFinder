@@ -103,3 +103,31 @@ export function errorLines(error: unknown): string[] {
   if (typeof message === "string") return [message];
   return ["Could not reach the server. Please try again."];
 }
+
+// "Rs 9,500"
+export function formatPrice(price: number): string {
+  return `Rs ${price.toLocaleString("en-IN")}`;
+}
+
+// "2026-12-01" -> "1 Dec 2026". UTC is used so the day never shifts with the time zone.
+export function formatDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export const FURNISHING_LABELS: Record<Furnishing, string> = {
+  none: "Unfurnished",
+  semi: "Semi-furnished",
+  full: "Fully furnished",
+};
+
+export const PARKING_LABELS: Record<Parking, string> = {
+  none: "No parking",
+  bike: "Bike parking",
+  car: "Car parking",
+  both: "Bike and car parking",
+};

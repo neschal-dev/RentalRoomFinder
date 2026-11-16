@@ -1,48 +1,54 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import { Logo } from "@/components/logo";
+import { buttonVariants } from "@/components/ui/button";
 
-// Top bar shown on every page.
+// Top bar of the public pages.
 export function SiteHeader() {
   return (
-    <header className="flex h-16 items-center justify-between border-b border-black/10 px-6 dark:border-white/15">
-      <Link href="/" className="text-lg font-semibold">
-        FindMeAPlace
-      </Link>
+    <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <Logo />
 
-      {/* Whether someone is logged in is only known at request time, so this part
-          streams in behind a Suspense boundary (required by Cache Components). */}
-      <Suspense fallback={<div className="h-10 w-40" />}>
-        <nav className="flex items-center gap-4">
-          <Link href="/listings" className="text-sm font-medium">
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <Link
+            href="/listings"
+            className={buttonVariants({ variant: "ghost" })}
+          >
             Find a place
           </Link>
-          {/* Visitors who are not logged in see these two buttons. */}
-          <Show when="signed-out">
-            <SignInButton mode="redirect">
-              <button className="cursor-pointer text-sm font-medium">
-                Sign in
-              </button>
-            </SignInButton>
-            <SignUpButton mode="redirect">
-              <button className="h-10 cursor-pointer rounded-full bg-black px-5 text-sm font-medium text-white dark:bg-white dark:text-black">
-                Sign up
-              </button>
-            </SignUpButton>
-          </Show>
 
-          {/* Logged-in users see a link to their account and the avatar menu (with sign out). */}
-          <Show when="signed-in">
-            <Link href="/account/listings" className="text-sm font-medium">
-              My listings
-            </Link>
-            <Link href="/account" className="text-sm font-medium">
-              My account
-            </Link>
-            <UserButton />
-          </Show>
+          {/* Whether someone is logged in is only known at request time, so this part
+              streams in behind a Suspense boundary (required by Cache Components). */}
+          <Suspense fallback={<div className="h-10 w-44" />}>
+            <Show when="signed-out">
+              <SignInButton mode="redirect">
+                <button className={buttonVariants({ variant: "ghost" })}>
+                  Sign in
+                </button>
+              </SignInButton>
+              <Link
+                href="/account/listings/new"
+                className={buttonVariants({ variant: "accent" })}
+              >
+                Post a place
+              </Link>
+            </Show>
+            <Show when="signed-in">
+              <Link
+                href="/account"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                Dashboard
+              </Link>
+              <div className="ml-1 flex items-center">
+                <UserButton />
+              </div>
+            </Show>
+          </Suspense>
         </nav>
-      </Suspense>
+      </div>
     </header>
   );
 }
