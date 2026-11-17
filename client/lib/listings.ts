@@ -38,14 +38,22 @@ export type ListingFields = {
   createdAt: string;
 };
 
+// Where the PUBLIC is told a listing is. "exact" is the real spot. "area" is a moved point
+// with a radius, used when the owner did not want to show the exact spot.
+export type PublicLocation = {
+  locationPrecision: "exact" | "area";
+  locationRadiusMeters: number | null;
+};
+
 // One card on the search page. Only the first photo is sent.
-export type ListingCard = ListingFields & { cover: Media | null };
+export type ListingCard = ListingFields & PublicLocation & { cover: Media | null };
 
 // The public detail page.
-export type ListingDetail = ListingFields & {
-  media: Media[];
-  facilities: Facility[];
-};
+export type ListingDetail = ListingFields &
+  PublicLocation & {
+    media: Media[];
+    facilities: Facility[];
+  };
 
 // What the owner sees about their own listing (adds status and expiry).
 export type MyListing = ListingDetail & {
@@ -53,6 +61,10 @@ export type MyListing = ListingDetail & {
   status: ListingStatus;
   expiresAt: string | null;
   updatedAt: string;
+  // The real point. Only the owner is sent this.
+  latitude: number;
+  longitude: number;
+  showExactLocation: boolean;
 };
 
 // GET /listings
