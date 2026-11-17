@@ -1,4 +1,5 @@
 import type { WithFacilityLinks } from './interfaces/with-facility-links.interface.js';
+import { publicLocation } from './location-privacy.js';
 
 // What a stranger browsing the site may see about a listing.
 // This is an allowlist: a column added to the database later stays private
@@ -18,19 +19,29 @@ const PUBLIC_KEYS = [
   'rentPrice',
   'city',
   'area',
-  'latitude',
-  'longitude',
   'availableFrom',
   'createdAt',
 ] as const;
 
-// On top of that, the owner sees the life-cycle fields of their own listing.
+// On top of that, the owner sees the life-cycle fields of their own listing,
+// the real coordinates, and whether they chose to show them.
 const OWNER_EXTRA_KEYS = [
   'ownerId',
   'status',
   'expiresAt',
   'updatedAt',
+  'latitude',
+  'longitude',
+  'showExactLocation',
 ] as const;
+
+// The columns publicLocation needs.
+type LocatedRow = {
+  id: string;
+  latitude: number;
+  longitude: number;
+  showExactLocation: boolean;
+};
 
 type PublicKey = (typeof PUBLIC_KEYS)[number];
 type OwnerKey = PublicKey | (typeof OWNER_EXTRA_KEYS)[number];
@@ -53,17 +64,22 @@ function flattenFacilities(row: WithFacilityLinks) {
 }
 
 // One card on the search page.
-export function toPublicCard<Row extends Record<PublicKey, unknown>>(row: Row) {
-  return pick(row, PUBLIC_KEYS);
+export function toPublicCard<
+  Row extends Record<PublicKey, unknown> & LocatedRow,
+>(row: Row) {
+  // The location goes through publicLocation, so a hidden spot never leaves the server.
+  return { ...pick(row, PUBLIC_KEYS), ...publicLocation(row) };
 }
 
 // The public detail page: public fields plus photos and facilities.
 export function toPublicDetail<
   Row extends Record<PublicKey, unknown> &
+    LocatedRow &
     WithFacilityLinks & { media: unknown },
 >(row: Row) {
   return {
     ...pick(row, PUBLIC_KEYS),
+    ...publicLocation(row),
     media: row.media,
     facilities: flattenFacilities(row),
   };

@@ -366,6 +366,10 @@ function buildSamples(): MyListing[] {
       area: row.area,
       latitude: row.latitude,
       longitude: row.longitude,
+      // A mix, so the demo shows both a pin and a circle.
+      showExactLocation: index % 3 === 0,
+      locationPrecision: index % 3 === 0 ? "exact" : "area",
+      locationRadiusMeters: index % 3 === 0 ? null : 400,
       availableFrom: daysFromNow(Math.max(row.availableInDays, 0)).slice(0, 10),
       createdAt: daysFromNow(-row.postedDaysAgo),
       updatedAt: daysFromNow(-row.postedDaysAgo),

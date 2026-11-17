@@ -76,6 +76,7 @@ export class ListingsService {
         area: input.area,
         latitude: input.latitude,
         longitude: input.longitude,
+        showExactLocation: input.showExactLocation ?? false,
         availableFrom: Temporal.PlainDate.from(input.availableFrom),
         // A free post goes live at once. Otherwise the listing waits for payment,
         // and the payment module sets status "active" and the expiry date.

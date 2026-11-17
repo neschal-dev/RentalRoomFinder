@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'c8eeb7a0fc0c74ab5e5f9c48103bf65802b628b07c677dac5954eaedc26cc60d'>;
+  StorageHashBase<'ad559169c10f0b6c6ca38ca59429551b08dd357599039d00e98421bd49770e3e'>;
 export type ExecutionHash =
   ExecutionHashBase<'cfa590ca50849d40fdf723c7998d44bfc788b70e5b18961313b589ec62d8e518'>;
 export type ProfileHash =
@@ -703,6 +703,7 @@ export namespace Models {
     petsAllowed: FieldOutputTypes['public']['Listing']['petsAllowed'];
     propertyType: FieldOutputTypes['public']['Listing']['propertyType'];
     rentPrice: FieldOutputTypes['public']['Listing']['rentPrice'];
+    showExactLocation: FieldOutputTypes['public']['Listing']['showExactLocation'];
     sizeSqft: FieldOutputTypes['public']['Listing']['sizeSqft'];
     smokingAllowed: FieldOutputTypes['public']['Listing']['smokingAllowed'];
     status: FieldOutputTypes['public']['Listing']['status'];
@@ -1099,6 +1100,16 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
                   readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly showExactLocation: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
+                  };
                   readonly many: false;
                 };
                 readonly sizeSqft: {
@@ -1747,6 +1758,10 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/int4@1';
                 };
               };
+              readonly showExactLocation: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
               readonly sizeSqft: {
                 readonly nullable: true;
                 readonly type: {
@@ -1871,6 +1886,7 @@ type ContractBase = Omit<
                 readonly petsAllowed: { readonly column: 'petsAllowed' };
                 readonly propertyType: { readonly column: 'propertyType' };
                 readonly rentPrice: { readonly column: 'rentPrice' };
+                readonly showExactLocation: { readonly column: 'showExactLocation' };
                 readonly sizeSqft: { readonly column: 'sizeSqft' };
                 readonly smokingAllowed: { readonly column: 'smokingAllowed' };
                 readonly status: { readonly column: 'status' };

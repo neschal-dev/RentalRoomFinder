@@ -1,5 +1,6 @@
 "use client";
 
+import { LocationPicker } from "@/components/map/location-picker";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -61,10 +62,14 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
   const [city, setCity] = useState<City>(existing?.city ?? "Banepa");
   const [area, setArea] = useState(existing?.area ?? "");
   const [latitude, setLatitude] = useState(
-    String(existing?.latitude ?? CITY_CENTERS.Banepa.latitude),
+    existing?.latitude ?? CITY_CENTERS.Banepa.latitude,
   );
   const [longitude, setLongitude] = useState(
-    String(existing?.longitude ?? CITY_CENTERS.Banepa.longitude),
+    existing?.longitude ?? CITY_CENTERS.Banepa.longitude,
+  );
+  // Off unless the owner chooses it: the public then sees a rough circle, not the door.
+  const [showExactLocation, setShowExactLocation] = useState(
+    existing?.showExactLocation ?? false,
   );
   const [availableFrom, setAvailableFrom] = useState(
     existing?.availableFrom ?? "",
@@ -97,20 +102,20 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
   function changeCity(next: City) {
     setCity(next);
     if (!existing) {
-      setLatitude(String(CITY_CENTERS[next].latitude));
-      setLongitude(String(CITY_CENTERS[next].longitude));
+      setLatitude(CITY_CENTERS[next].latitude);
+      setLongitude(CITY_CENTERS[next].longitude);
     }
   }
 
   function useMyLocation() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude.toFixed(6));
-        setLongitude(position.coords.longitude.toFixed(6));
+        setLatitude(Number(position.coords.latitude.toFixed(6)));
+        setLongitude(Number(position.coords.longitude.toFixed(6)));
       },
       () =>
         setErrors([
-          "Could not read your location. Type the coordinates instead.",
+          "Could not read your location. Click the map to place the pin instead.",
         ]),
     );
   }
@@ -179,8 +184,9 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
       rentPrice: Number(rentPrice),
       city,
       area,
-      latitude: Number(latitude),
-      longitude: Number(longitude),
+      latitude,
+      longitude,
+      showExactLocation,
       availableFrom,
       facilityIds,
       media,
@@ -410,38 +416,39 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
               maxLength={80}
             />
           </Field>
-          <Field label="Latitude">
-            <Input
-              type="number"
-              step="any"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Longitude">
-            <Input
-              type="number"
-              step="any"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              required
-            />
-          </Field>
-          <div className="flex items-end">
-            <Button
-              variant="outline"
-              onClick={useMyLocation}
-              className="w-full"
-            >
-              Use my current location
-            </Button>
-          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Stand at the property and use your current location for the best
-          result. A map picker is coming later.
-        </p>
+        <div className="mt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Click the map or drag the pin to the property.
+          </p>
+          <LocationPicker
+            latitude={latitude}
+            longitude={longitude}
+            onChange={(lat, lng) => {
+              setLatitude(Number(lat.toFixed(6)));
+              setLongitude(Number(lng.toFixed(6)));
+            }}
+          />
+          <Button variant="outline" onClick={useMyLocation}>
+            Use my current location
+          </Button>
+          <label className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
+            <input
+              type="checkbox"
+              checked={showExactLocation}
+              onChange={(e) => setShowExactLocation(e.target.checked)}
+              className="mt-1 size-4"
+            />
+            <span>
+              <span className="font-medium">Show the exact location on the map</span>
+              <span className="block text-muted-foreground">
+                {showExactLocation
+                  ? "Visitors will see a pin on the property."
+                  : "Visitors will see a rough circle around the area, not the exact spot."}
+              </span>
+            </span>
+          </label>
+        </div>
       </Section>
 
       <Section

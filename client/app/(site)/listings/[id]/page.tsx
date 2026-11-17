@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { Gallery } from "@/components/gallery";
+import { ListingMap } from "@/components/map/listing-map";
 import { fetchDetail } from "@/lib/server-data";
 import {
   FURNISHING_LABELS,
@@ -104,6 +105,24 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
               </ul>
             </section>
           )}
+
+          <section>
+            <h2 className="mb-1 font-display text-xl font-semibold">
+              Where you will be
+            </h2>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {listing.area}, {listing.city}
+              {listing.locationPrecision === "area"
+                ? ". The owner shares the area only, so the circle is approximate."
+                : ""}
+            </p>
+            <ListingMap
+              latitude={listing.latitude}
+              longitude={listing.longitude}
+              precision={listing.locationPrecision}
+              radiusMeters={listing.locationRadiusMeters}
+            />
+          </section>
 
           <section>
             <h2 className="mb-4 font-display text-xl font-semibold">

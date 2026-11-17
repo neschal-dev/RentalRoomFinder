@@ -106,6 +106,12 @@ export class CreateListingDto {
   @Max(NEPAL_BOUNDS.maxLongitude)
   longitude: number;
 
+  // false (the default): renters see a circle of about 400 m around the spot.
+  // true: renters see the exact pin.
+  @IsOptional()
+  @IsBoolean()
+  showExactLocation?: boolean;
+
   // A calendar date like "2026-12-01". The strict check also rejects dates that do not
   // exist, such as "2026-02-31".
   @Matches(/^\d{4}-\d{2}-\d{2}$/, {

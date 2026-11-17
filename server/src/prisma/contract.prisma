@@ -103,6 +103,8 @@ model Listing {
   area               String
   latitude           Float
   longitude          Float
+  // false: the public sees a circle of about 400 m, not the exact spot (the server hides the real point)
+  showExactLocation  Boolean            @default(false)
 
   // Filled in by the server: the closest junction in the road graph (for Dijkstra)
   nearestNodeId      BigIntNumber?
