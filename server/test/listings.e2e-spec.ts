@@ -253,6 +253,100 @@ describe('creating a listing', () => {
   });
 });
 
+describe('location privacy', () => {
+  const REAL = { latitude: 27.6298, longitude: 85.5218 };
+
+  // Straight-line distance in metres between two points that are close together.
+  function metersBetween(
+    a: { latitude: number; longitude: number },
+    b: { latitude: number; longitude: number },
+  ) {
+    const north = (a.latitude - b.latitude) * 111_320;
+    const east =
+      (a.longitude - b.longitude) *
+      111_320 *
+      Math.cos((b.latitude * Math.PI) / 180);
+    return Math.hypot(north, east);
+  }
+
+  it('shows a circle, not the real spot, unless the owner chose exact', async () => {
+    await makeUser('loc-hidden', true);
+    const created = await http()
+      .post('/listings')
+      .set(as('loc-hidden'))
+      .send(payload()) // showExactLocation not sent: the default is hidden
+      .expect(201);
+
+    // The owner always sees the real coordinates and the setting.
+    expect(created.body).toMatchObject({ ...REAL, showExactLocation: false });
+    const mine = await http()
+      .get('/listings/mine')
+      .set(as('loc-hidden'))
+      .expect(200);
+    expect(mine.body[0]).toMatchObject({ ...REAL, showExactLocation: false });
+
+    // The public gets a moved point and a radius.
+    const id = created.body.id as string;
+    const detail = await http().get(`/listings/${id}`).expect(200);
+    expect(detail.body.locationPrecision).toBe('area');
+    expect(detail.body.locationRadiusMeters).toBe(400);
+    expect(detail.body).not.toHaveProperty('showExactLocation');
+    expect(detail.body.latitude).not.toBe(REAL.latitude);
+    // Moved 80 to 280 metres, so the real spot is inside the 400 m circle but not at its centre.
+    const moved = metersBetween(detail.body, REAL);
+    expect(moved).toBeGreaterThan(70);
+    expect(moved).toBeLessThan(290);
+
+    // The same answer every time, and the same on the search page.
+    const again = await http().get(`/listings/${id}`).expect(200);
+    expect(again.body.latitude).toBe(detail.body.latitude);
+    expect(again.body.longitude).toBe(detail.body.longitude);
+    const search = await http().get('/listings').expect(200);
+    const card = search.body.items.find((i: { id: string }) => i.id === id);
+    expect(card.latitude).toBe(detail.body.latitude);
+    expect(card.locationPrecision).toBe('area');
+  });
+
+  it('shows the real spot when the owner chose exact', async () => {
+    await makeUser('loc-exact', true);
+    const created = await http()
+      .post('/listings')
+      .set(as('loc-exact'))
+      .send(payload({ showExactLocation: true }))
+      .expect(201);
+
+    const detail = await http().get(`/listings/${created.body.id}`).expect(200);
+    expect(detail.body).toMatchObject({
+      ...REAL,
+      locationPrecision: 'exact',
+      locationRadiusMeters: null,
+    });
+  });
+
+  it('lets the owner switch it later, and nobody else', async () => {
+    await makeUser('loc-switch', true);
+    const created = await http()
+      .post('/listings')
+      .set(as('loc-switch'))
+      .send(payload())
+      .expect(201);
+
+    await http()
+      .patch(`/listings/${created.body.id}`)
+      .set(as('loc-exact'))
+      .send({ showExactLocation: true })
+      .expect(403);
+    await http()
+      .patch(`/listings/${created.body.id}`)
+      .set(as('loc-switch'))
+      .send({ showExactLocation: true })
+      .expect(200);
+
+    const detail = await http().get(`/listings/${created.body.id}`).expect(200);
+    expect(detail.body.locationPrecision).toBe('exact');
+  });
+});
+
 describe('upload signature', () => {
   it('needs a login, and rejects an unknown file type', async () => {
     await makeUser('uploader', false);

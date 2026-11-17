@@ -448,6 +448,13 @@
                   "kind": "scalar"
                 }
               },
+              "showExactLocation": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "sizeSqft": {
                 "nullable": true,
                 "type": {
@@ -635,6 +642,9 @@
                 },
                 "rentPrice": {
                   "column": "rentPrice"
+                },
+                "showExactLocation": {
+                  "column": "showExactLocation"
                 },
                 "sizeSqft": {
                   "column": "sizeSqft"
@@ -1572,6 +1582,15 @@
                   "dataType": "pg/int4",
                   "nullable": false
                 },
+                "showExactLocation": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
                 "sizeSqft": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
@@ -2126,7 +2145,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c8eeb7a0fc0c74ab5e5f9c48103bf65802b628b07c677dac5954eaedc26cc60d"
+    "storageHash": "ad559169c10f0b6c6ca38ca59429551b08dd357599039d00e98421bd49770e3e"
   },
   "execution": {
     "executionHash": "cfa590ca50849d40fdf723c7998d44bfc788b70e5b18961313b589ec62d8e518",
