@@ -1,10 +1,9 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
-import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
-import { MapTiles } from "./map-tiles";
-import { pinIcon } from "./pin-icon";
+import L from "leaflet";
+import { useEffect, useRef } from "react";
+import { addTiles, pinIcon } from "./leaflet-setup";
 
 export type LocationPickerProps = {
   latitude: number;
@@ -12,46 +11,56 @@ export type LocationPickerProps = {
   onChange: (latitude: number, longitude: number) => void;
 };
 
-// Listens for clicks on the map and reports where they landed.
-function ClickToPlace({ onChange }: Pick<LocationPickerProps, "onChange">) {
-  useMapEvents({
-    click(event) {
-      onChange(event.latlng.lat, event.latlng.lng);
-    },
-  });
-  return null;
-}
+// The map in the listing form: click anywhere, or drag the pin, to set the location.
+export default function LocationPickerInner({ latitude, longitude, onChange }: LocationPickerProps) {
+  const box = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
 
-// When the point is changed from outside the map (for example "Use my location", or a new
-// city), move the map there. A point the owner just placed on the visible map is left alone.
-function FollowPoint({ latitude, longitude }: Pick<LocationPickerProps, "latitude" | "longitude">) {
-  const map = useMap();
+  // The map reads the newest onChange without being rebuilt each time the form re-renders.
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
+  // Start the map once (and again only if React remounts it).
+  useEffect(() => {
+    const element = box.current;
+    if (!element) return;
+
+    const map = L.map(element, { center: [latitude, longitude], zoom: 16 });
+    addTiles(map);
+
+    const marker = L.marker([latitude, longitude], { icon: pinIcon, draggable: true }).addTo(map);
+    marker.on("dragend", () => {
+      const point = marker.getLatLng();
+      onChangeRef.current(point.lat, point.lng);
+    });
+    map.on("click", (event: L.LeafletMouseEvent) => {
+      onChangeRef.current(event.latlng.lat, event.latlng.lng);
+    });
+
+    mapRef.current = map;
+    markerRef.current = marker;
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+    };
+    // The starting point is read once; later changes are handled by the effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When the point changes from outside (a new city, "Use my location"), follow it.
+  useEffect(() => {
+    const map = mapRef.current;
+    const marker = markerRef.current;
+    if (!map || !marker) return;
+    marker.setLatLng([latitude, longitude]);
     if (!map.getBounds().contains([latitude, longitude])) {
       map.setView([latitude, longitude], Math.max(map.getZoom(), 15));
     }
-  }, [map, latitude, longitude]);
-  return null;
-}
+  }, [latitude, longitude]);
 
-// The map in the listing form: click anywhere, or drag the pin, to set the location.
-export default function LocationPickerInner({ latitude, longitude, onChange }: LocationPickerProps) {
-  return (
-    <MapContainer center={[latitude, longitude]} zoom={16} className="size-full">
-      <MapTiles />
-      <ClickToPlace onChange={onChange} />
-      <FollowPoint latitude={latitude} longitude={longitude} />
-      <Marker
-        position={[latitude, longitude]}
-        icon={pinIcon}
-        draggable
-        eventHandlers={{
-          dragend(event) {
-            const { lat, lng } = event.target.getLatLng();
-            onChange(lat, lng);
-          },
-        }}
-      />
-    </MapContainer>
-  );
+  return <div ref={box} className="size-full" />;
 }
