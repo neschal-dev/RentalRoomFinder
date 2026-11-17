@@ -1,26 +1,86 @@
 @import "tailwindcss";
 
+/* Colour tokens. Components use the names (bg-card, text-muted-foreground ...),
+   so changing the look of the whole site means changing the values here. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f6f5; /* cool stone */
+  --foreground: #14232c; /* ink */
+  --card: #ffffff;
+  --muted: #e8eeec;
+  --muted-foreground: #566870;
+  --border: #d6dfdc;
+  --primary: #1b4a5a; /* deep blue-teal */
+  --primary-foreground: #f3f8f8;
+  --accent: #f2b33d; /* marigold */
+  --accent-foreground: #3a2800;
+  --success: #17653f;
+  --success-soft: #dcf2e5;
+  --warning: #8a5300;
+  --warning-soft: #fdecc8;
+  --danger: #b42318;
+  --danger-soft: #fde4e1;
+  --ring: #1b4a5a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e181d;
+    --foreground: #e7eeed;
+    --card: #15232a;
+    --muted: #1c2d35;
+    --muted-foreground: #92a4ac;
+    --border: #263a42;
+    --primary: #7cc4d6;
+    --primary-foreground: #08171c;
+    --accent: #f2b33d;
+    --accent-foreground: #3a2800;
+    --success: #7ad7a4;
+    --success-soft: #12362a;
+    --warning: #f4c46a;
+    --warning-soft: #3a2b0a;
+    --danger: #ff9a8f;
+    --danger-soft: #3d1a17;
+    --ring: #7cc4d6;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-body), system-ui, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* Keyboard users always see where they are. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

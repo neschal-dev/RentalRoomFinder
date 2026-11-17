@@ -3,7 +3,10 @@
 import { use, useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { ListingForm } from "@/components/listing-form";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { createApi } from "@/lib/api";
+import { DEMO, sampleMine } from "@/lib/demo";
 import type { MyListing } from "@/lib/listings";
 
 // Loads the owner's listing, then shows the form filled in.
@@ -13,11 +16,13 @@ export default function EditListingPage({
 }: PageProps<"/account/listings/[id]/edit">) {
   const { id } = use(params);
   const { isLoaded, getToken } = useAuth();
-  const [listing, setListing] = useState<MyListing | null>(null);
+  const [listing, setListing] = useState<MyListing | null>(
+    DEMO ? (sampleMine().find((l) => l.id === id) ?? null) : null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (DEMO || !isLoaded) return;
     createApi(getToken)
       .get<MyListing[]>("/listings/mine")
       .then((response) => {
@@ -29,11 +34,18 @@ export default function EditListingPage({
   }, [isLoaded, getToken, id]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8">
-      <h1 className="mb-6 text-2xl font-semibold">Edit listing</h1>
-      {error && <p className="text-red-600">{error}</p>}
-      {!listing && !error && <p>Loading…</p>}
+    <>
+      <PageHeader
+        title="Edit listing"
+        description="Changes show on the public page as soon as you save."
+      />
+      {error && (
+        <Card className="border-danger/40 bg-danger-soft p-4 text-danger">
+          {error}
+        </Card>
+      )}
+      {!listing && !error && <p className="text-muted-foreground">Loading…</p>}
       {listing && <ListingForm existing={listing} />}
-    </main>
+    </>
   );
 }
