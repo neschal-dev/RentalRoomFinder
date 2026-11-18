@@ -61,7 +61,7 @@ function readEsewa() {
     ),
     statusUrl: withTestDefault(
       'ESEWA_STATUS_URL',
-      'https://uat.esewa.com.np/api/epay/transaction/status/',
+      'https://rc.esewa.com.np/api/epay/transaction/status/',
     ),
   };
 }
