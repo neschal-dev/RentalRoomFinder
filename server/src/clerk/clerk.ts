@@ -1,6 +1,7 @@
 import { createClerkClient } from '@clerk/express';
 import { env } from '../env.js';
 
+
 // Settings that clerkMiddleware (main.ts) and the Clerk client share.
 export const clerkConfig = {
   publishableKey: env.clerkPublishableKey,

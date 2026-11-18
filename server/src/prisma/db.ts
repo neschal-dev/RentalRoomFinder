@@ -8,6 +8,7 @@ import type { Contract } from './contract.d';
 import contractJson from './contract.json' with { type: 'json' };
 import { env } from '../env.js';
 
+
 export const contract = contractFromJson<Contract>(contractJson);
 
 export const db = postgres({
