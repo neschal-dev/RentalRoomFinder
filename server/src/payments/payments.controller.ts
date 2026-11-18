@@ -10,6 +10,7 @@ import { CurrentUser } from '../auth/decorator/current-user.decorator.js';
 import { ClerkAuthGuard } from '../auth/guard/guard.guard.js';
 import type { LocalUser } from '../auth/types/local-user.type.js';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto.js';
+import { VerifyPaymentDto } from './dto/verify-payment.dto.js';
 import { PaymentsService } from './payments.service.js';
 
 @Controller('payments')
@@ -28,5 +29,14 @@ export class PaymentsController {
     @Body() body: InitiatePaymentDto,
   ) {
     return this.payments.initiateEsewa(user, body.listingId);
+  }
+
+  // POST /payments/esewa/verify   (login needed)
+  // The success page sends what eSewa put in the address. The server confirms it with eSewa.
+  @Post('esewa/verify')
+  @HttpCode(200)
+  @UseGuards(ClerkAuthGuard)
+  verifyEsewa(@CurrentUser() user: LocalUser, @Body() body: VerifyPaymentDto) {
+    return this.payments.verifyEsewa(user, body.data);
   }
 }
