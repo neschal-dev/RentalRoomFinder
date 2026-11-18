@@ -125,7 +125,9 @@ export function PaymentResult() {
       <p>
         You were not charged for this try. You can pay again from My listings.
       </p>
-      <MyListingsLink />
+      <div className="mt-4">
+        <MyListingsLink />
+      </div>
     </Panel>
   );
 }
