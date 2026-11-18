@@ -9,18 +9,21 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createApi } from "@/lib/api";
 import { formatDate } from "@/lib/listings";
-import type { VerifyResponse } from "@/lib/payments";
+import type { Provider, VerifyResponse } from "@/lib/payments";
 
 type State =
   | { kind: "checking" }
   | { kind: "done"; result: VerifyResponse }
   | { kind: "error"; message: string };
 
-// The page eSewa sends the owner back to. eSewa puts a Base64 text in the address (?data=...).
-// We pass it to our server, which confirms the payment with eSewa before anything goes live.
-export function PaymentResult() {
+// The page a payment provider sends the owner back to.
+// eSewa puts a Base64 text in the address (?data=...). Khalti puts our payment id (?purchase_order_id=...).
+// We pass it to our server, which confirms the payment with the provider before anything goes live.
+export function PaymentResult({ provider }: { provider: Provider }) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
-  const data = useSearchParams().get("data");
+  const search = useSearchParams();
+  const data =
+    provider === "esewa" ? search.get("data") : search.get("purchase_order_id");
   const [state, setState] = useState<State>({ kind: "checking" });
   const started = useRef(false);
 
@@ -29,8 +32,8 @@ export function PaymentResult() {
     setState({ kind: "checking" });
     try {
       const response = await createApi(getToken).post<VerifyResponse>(
-        "/payments/esewa/verify",
-        { data },
+        `/payments/${provider}/verify`,
+        provider === "esewa" ? { data } : { purchaseOrderId: data },
       );
       setState({ kind: "done", result: response.data });
     } catch (error: unknown) {
@@ -40,11 +43,11 @@ export function PaymentResult() {
         kind: "error",
         message:
           status === 503
-            ? "We could not reach eSewa to confirm the payment. Nothing was lost. Try again in a moment."
+            ? "We could not reach the payment provider to confirm the payment. Nothing was lost. Try again in a moment."
             : "We could not confirm this payment. If money left your account, contact us with the time of payment.",
       });
     }
-  }, [data, getToken]);
+  }, [data, getToken, provider]);
 
   useEffect(() => {
     // Once is enough. The server is safe to call twice, but there is no need.
@@ -56,7 +59,7 @@ export function PaymentResult() {
   if (!data) {
     return (
       <Panel icon="fail" title="Nothing to confirm">
-        <p>This page is opened by eSewa after a payment.</p>
+        <p>This page is opened after a payment, by eSewa or Khalti.</p>
         <div className="mt-4">
           <MyListingsLink />
         </div>
@@ -73,7 +76,7 @@ export function PaymentResult() {
   if (state.kind === "checking") {
     return (
       <Panel icon="wait" title="Confirming your payment">
-        <p>Checking with eSewa. This takes a few seconds.</p>
+        <p>Checking with the payment provider. This takes a few seconds.</p>
       </Panel>
     );
   }
@@ -112,7 +115,10 @@ export function PaymentResult() {
   if (result.paymentStatus === "pending") {
     return (
       <Panel icon="wait" title="Payment still processing">
-        <p>eSewa has not finished the payment yet. Check again in a minute.</p>
+        <p>
+          The payment provider has not finished the payment yet. Check again in
+          a minute.
+        </p>
         <div className="mt-4 flex gap-2">
           <Button onClick={() => void verify()}>Check again</Button>
           <MyListingsLink />

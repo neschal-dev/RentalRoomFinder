@@ -7,7 +7,7 @@ export default function EsewaSuccessPage() {
     <main className="px-4 pb-16">
       {/* useSearchParams needs a Suspense boundary. */}
       <Suspense fallback={null}>
-        <PaymentResult />
+        <PaymentResult provider="esewa" />
       </Suspense>
     </main>
   );
