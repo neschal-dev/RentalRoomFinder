@@ -877,6 +877,13 @@
                   "kind": "scalar"
                 }
               },
+              "transactionUuid": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "updatedAt": {
                 "nullable": false,
                 "type": {
@@ -948,6 +955,9 @@
                 },
                 "transactionId": {
                   "column": "transactionId"
+                },
+                "transactionUuid": {
+                  "column": "transactionUuid"
                 },
                 "updatedAt": {
                   "column": "updatedAt"
@@ -1768,6 +1778,11 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "transactionUuid": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "dataType": "pg/timestamptz",
@@ -1845,6 +1860,11 @@
                 ]
               },
               "uniques": [
+                {
+                  "columns": [
+                    "transactionUuid"
+                  ]
+                },
                 {
                   "columns": [
                     "provider",
@@ -2145,7 +2165,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "ad559169c10f0b6c6ca38ca59429551b08dd357599039d00e98421bd49770e3e"
+    "storageHash": "4221558590dd89482a9cb39e648643c9d55105bca73797102d1ec47605bfea7c"
   },
   "execution": {
     "executionHash": "cfa590ca50849d40fdf723c7998d44bfc788b70e5b18961313b589ec62d8e518",
