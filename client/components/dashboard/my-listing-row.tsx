@@ -3,6 +3,7 @@ import { ImageOff, MapPin, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PayButton } from "@/components/dashboard/pay-button";
 import {
   STATUS_LABELS,
   formatDate,
@@ -83,7 +84,14 @@ export function MyListingRow({
         </p>
       </div>
 
-      <div className="flex shrink-0 gap-2">
+      <div className="flex shrink-0 flex-wrap items-start gap-2">
+        {/* Only the owner's dashboard passes onDelete; the pay button belongs there too. */}
+        {onDelete && listing.status === "pending_payment" && (
+          <PayButton listingId={listing.id} />
+        )}
+        {onDelete && listing.status === "expired" && (
+          <PayButton listingId={listing.id} renew />
+        )}
         {listing.status === "active" && (
           <Link
             href={`/listings/${listing.id}`}
