@@ -94,8 +94,8 @@ function MyListings() {
       )}
       {created === "pending_payment" && (
         <Notice tone="warning">
-          Your listing is saved but not live yet. Payment publishes it, and
-          online payment is coming soon.
+          Your listing is saved but not live yet. Pay NPR 200 with eSewa to
+          publish it for 30 days.
         </Notice>
       )}
       {search.get("saved") && <Notice tone="success">Changes saved.</Notice>}

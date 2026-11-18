@@ -10,10 +10,19 @@ import {
 import { Test } from '@nestjs/testing';
 import { createHmac } from 'node:crypto';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { ClerkAuthGuard } from '../src/auth/guard/guard.guard.js';
 import { env } from '../src/env.js';
+import { EsewaClient } from '../src/payments/esewa.client.js';
 import { db } from '../src/prisma/db.js';
 import { UsersService } from '../src/users/users.service.js';
 
@@ -38,6 +47,9 @@ class FakeAuthGuard implements CanActivate {
 }
 
 const as = (clerkId: string) => ({ 'x-test-clerk-id': clerkId });
+
+// Stands in for eSewa's server, so the tests need no network. Each test says what "eSewa" answers.
+const fakeEsewa = { getStatus: vi.fn() };
 
 let app: INestApplication;
 let users: UsersService;
@@ -77,6 +89,8 @@ beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideGuard(ClerkAuthGuard)
     .useClass(FakeAuthGuard)
+    .overrideProvider(EsewaClient)
+    .useValue(fakeEsewa)
     .compile();
 
   app = moduleRef.createNestApplication();
@@ -208,5 +222,241 @@ describe('POST /payments/esewa/initiate', () => {
       .set(as('pay_owner'))
       .send({ listingId: 'abc' })
       .expect(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Verify
+// ---------------------------------------------------------------------------
+
+// Builds the Base64 text eSewa puts in the address, signed the way eSewa signs it.
+function esewaReply(
+  transactionUuid: string,
+  overrides: Record<string, string> = {},
+  sign = true,
+) {
+  const names =
+    'transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names';
+  const reply: Record<string, string> = {
+    transaction_code: '000TEST1',
+    status: 'COMPLETE',
+    total_amount: '200',
+    transaction_uuid: transactionUuid,
+    product_code: env.esewa.productCode,
+    signed_field_names: names,
+    ...overrides,
+  };
+  const text = names
+    .split(',')
+    .map((name) => `${name}=${reply[name]}`)
+    .join(',');
+  reply['signature'] = sign
+    ? createHmac('sha256', env.esewa.secretKey).update(text).digest('base64')
+    : 'forged';
+  return Buffer.from(JSON.stringify(reply)).toString('base64');
+}
+
+// Starts a payment through the real endpoint and returns what the test needs.
+async function startPayment(clerkId: string) {
+  const owner = await users.findOrCreateByClerkId(clerkId);
+  const listing = await makeListing(owner.id, 'pending_payment');
+  const response = await request(app.getHttpServer())
+    .post('/payments/esewa/initiate')
+    .set(as(clerkId))
+    .send({ listingId: listing.id })
+    .expect(200);
+  return {
+    listingId: listing.id,
+    paymentId: response.body.paymentId as string,
+    uuid: response.body.fields.transaction_uuid as string,
+  };
+}
+
+const verify = (clerkId: string, data: string) =>
+  request(app.getHttpServer())
+    .post('/payments/esewa/verify')
+    .set(as(clerkId))
+    .send({ data });
+
+const listingNow = (id: string) => db.orm.public.Listing.where({ id }).first();
+
+describe('POST /payments/esewa/verify', () => {
+  beforeEach(() => {
+    fakeEsewa.getStatus.mockReset();
+  });
+
+  it('needs a login', async () => {
+    await request(app.getHttpServer())
+      .post('/payments/esewa/verify')
+      .send({ data: 'abc' })
+      .expect(401);
+  });
+
+  it('rejects text that is not a valid reply', async () => {
+    await users.findOrCreateByClerkId('v_owner');
+    await verify('v_owner', 'not base64 json').expect(400);
+    await verify('v_owner', Buffer.from('{"a":1}').toString('base64')).expect(
+      400,
+    );
+  });
+
+  it('rejects a forged signature and never asks eSewa', async () => {
+    const { uuid, listingId } = await startPayment('v_owner');
+    await verify('v_owner', esewaReply(uuid, {}, false)).expect(400);
+    expect(fakeEsewa.getStatus).not.toHaveBeenCalled();
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+  });
+
+  it('rejects a reply whose fields were changed after signing', async () => {
+    const { uuid } = await startPayment('v_owner');
+    const good = JSON.parse(
+      Buffer.from(esewaReply(uuid), 'base64').toString('utf8'),
+    );
+    good.total_amount = '1';
+    const tampered = Buffer.from(JSON.stringify(good)).toString('base64');
+    await verify('v_owner', tampered).expect(400);
+  });
+
+  it('returns 404 for a payment we never started', async () => {
+    await users.findOrCreateByClerkId('v_owner');
+    await verify(
+      'v_owner',
+      esewaReply('11111111-1111-4111-8111-111111111111'),
+    ).expect(404);
+  });
+
+  it("refuses someone else's payment", async () => {
+    const { uuid } = await startPayment('v_owner');
+    await users.findOrCreateByClerkId('v_stranger');
+    await verify('v_stranger', esewaReply(uuid)).expect(403);
+  });
+
+  it('activates the listing for 30 days when eSewa confirms the full amount', async () => {
+    const { uuid, listingId, paymentId } = await startPayment('v_owner');
+    fakeEsewa.getStatus.mockResolvedValue({
+      status: 'COMPLETE',
+      totalAmount: 200,
+      refId: '0009ABC',
+    });
+
+    const response = await verify('v_owner', esewaReply(uuid)).expect(200);
+    expect(response.body.paymentStatus).toBe('success');
+    expect(response.body.listingStatus).toBe('active');
+
+    // eSewa was asked about OUR stored amount.
+    expect(fakeEsewa.getStatus).toHaveBeenCalledWith(uuid, 200);
+
+    const listing = await listingNow(listingId);
+    expect(listing?.status).toBe('active');
+    const days =
+      (new Date(listing!.expiresAt!.toString()).getTime() - Date.now()) /
+      86_400_000;
+    expect(days).toBeGreaterThan(29.9);
+    expect(days).toBeLessThanOrEqual(30);
+
+    const payment = await db.orm.public.Payment.where({
+      id: paymentId,
+    }).first();
+    expect(payment?.status).toBe('success');
+    expect(payment?.transactionId).toBe('0009ABC');
+  });
+
+  it('does nothing the second time (a page reload)', async () => {
+    const { uuid, listingId } = await startPayment('v_owner');
+    fakeEsewa.getStatus.mockResolvedValue({
+      status: 'COMPLETE',
+      totalAmount: 200,
+      refId: '0009DEF',
+    });
+    await verify('v_owner', esewaReply(uuid)).expect(200);
+    const first = (await listingNow(listingId))!.expiresAt!.toString();
+
+    fakeEsewa.getStatus.mockClear();
+    const again = await verify('v_owner', esewaReply(uuid)).expect(200);
+    expect(again.body.paymentStatus).toBe('success');
+    // No second call to eSewa, and the expiry did not move.
+    expect(fakeEsewa.getStatus).not.toHaveBeenCalled();
+    expect((await listingNow(listingId))!.expiresAt!.toString()).toBe(first);
+  });
+
+  it('does not activate when eSewa says a different amount was paid', async () => {
+    const { uuid, listingId, paymentId } = await startPayment('v_owner');
+    fakeEsewa.getStatus.mockResolvedValue({
+      status: 'COMPLETE',
+      totalAmount: 20,
+      refId: 'X',
+    });
+
+    const response = await verify('v_owner', esewaReply(uuid)).expect(200);
+    expect(response.body.paymentStatus).toBe('failed');
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+    expect(
+      (await db.orm.public.Payment.where({ id: paymentId }).first())?.status,
+    ).toBe('failed');
+  });
+
+  it('does not trust the reply when eSewa says the payment was not found', async () => {
+    const { uuid, listingId } = await startPayment('v_owner');
+    fakeEsewa.getStatus.mockResolvedValue({
+      status: 'NOT_FOUND',
+      totalAmount: null,
+      refId: null,
+    });
+
+    // The reply says COMPLETE and is correctly signed, but eSewa's own answer wins.
+    const response = await verify('v_owner', esewaReply(uuid)).expect(200);
+    expect(response.body.paymentStatus).toBe('failed');
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+  });
+
+  it('leaves everything as it is while eSewa says PENDING', async () => {
+    const { uuid, listingId, paymentId } = await startPayment('v_owner');
+    fakeEsewa.getStatus.mockResolvedValue({
+      status: 'PENDING',
+      totalAmount: 200,
+      refId: null,
+    });
+
+    const response = await verify('v_owner', esewaReply(uuid)).expect(200);
+    expect(response.body.paymentStatus).toBe('pending');
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+    expect(
+      (await db.orm.public.Payment.where({ id: paymentId }).first())?.status,
+    ).toBe('started');
+  });
+
+  it('answers 503 and changes nothing when eSewa cannot be reached', async () => {
+    const { uuid, listingId, paymentId } = await startPayment('v_owner');
+    fakeEsewa.getStatus.mockRejectedValue(new Error('network down'));
+
+    await verify('v_owner', esewaReply(uuid)).expect(503);
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+    expect(
+      (await db.orm.public.Payment.where({ id: paymentId }).first())?.status,
+    ).toBe('started');
+  });
+
+  it('a paid-for listing can be paid again after it expired', async () => {
+    const owner = await users.findOrCreateByClerkId('v_owner');
+    const listing = await makeListing(owner.id, 'pending_payment');
+    await db.orm.public.Listing.where({ id: listing.id }).update({
+      status: 'expired',
+    });
+    const start = await request(app.getHttpServer())
+      .post('/payments/esewa/initiate')
+      .set(as('v_owner'))
+      .send({ listingId: listing.id })
+      .expect(200);
+    fakeEsewa.getStatus.mockResolvedValue({
+      status: 'COMPLETE',
+      totalAmount: 200,
+      refId: 'RENEW1',
+    });
+
+    await verify(
+      'v_owner',
+      esewaReply(start.body.fields.transaction_uuid),
+    ).expect(200);
+    expect((await listingNow(listing.id))?.status).toBe('active');
   });
 });
