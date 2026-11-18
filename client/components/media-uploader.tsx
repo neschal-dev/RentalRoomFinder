@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { createApi } from "@/lib/api";
 import { DEMO } from "@/lib/demo";
 import { MAX_MEDIA, MIN_PHOTOS, type MediaType } from "@/lib/listings";
-import { uploadMedia } from "@/lib/upload";
+import { describeUploadError, uploadMedia } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 
 export type UploadedMedia = { url: string; mediaType: MediaType };
@@ -105,13 +105,9 @@ export function MediaUploader({
         }),
       );
     } catch (error) {
-      patch(id, {
-        status: "error",
-        error:
-          error instanceof Error && !("response" in error)
-            ? error.message
-            : "Upload failed. Remove it and try again.",
-      });
+      // The full error goes to the browser console for whoever is debugging.
+      console.error("Upload failed", error);
+      patch(id, { status: "error", error: describeUploadError(error) });
     }
   }
 

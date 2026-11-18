@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance } from "axios";
+import axios, { isAxiosError, type AxiosInstance } from "axios";
 import type { MediaType } from "./listings";
 
 // Size limits checked in the browser before uploading.
@@ -60,4 +60,33 @@ export async function uploadMedia(
     },
   );
   return { url: data.secure_url, mediaType };
+}
+
+// Turns an upload error into one short sentence that says what really went wrong,
+// so the owner (and the developer) are not left with just "it failed".
+export function describeUploadError(error: unknown): string {
+  if (isAxiosError(error)) {
+    const data = error.response?.data as
+      { error?: { message?: string }; message?: string | string[] } | undefined;
+
+    // Cloudinary explains itself like { error: { message: "Invalid Signature ..." } }.
+    if (data?.error?.message) {
+      return `Cloudinary says: ${data.error.message}`;
+    }
+    // Our own server answers like { message: "..." } (or a list of messages).
+    if (data?.message) {
+      const text = Array.isArray(data.message)
+        ? data.message.join(", ")
+        : data.message;
+      return error.response?.status === 401
+        ? "You are not signed in. Sign in again and retry."
+        : `Our server says: ${text}`;
+    }
+    if (error.response) {
+      return `The upload was refused (HTTP ${error.response.status}).`;
+    }
+    // No answer at all: the request never got through.
+    return "Could not reach the server. Check your internet and that the server is running.";
+  }
+  return error instanceof Error ? error.message : "Upload failed.";
 }
