@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -15,6 +16,11 @@ import { db } from '../prisma/db.js';
 import { LISTING_DURATION_DAYS } from '../listings/listings.constants.js';
 import { EsewaClient, type EsewaStatus } from './esewa.client.js';
 import {
+  KhaltiClient,
+  type KhaltiPayment,
+  type KhaltiStatus,
+} from './khalti.client.js';
+import {
   decodeEsewaCallback,
   ESEWA_SIGNED_FIELDS,
   isEsewaSignatureValid,
@@ -26,10 +32,14 @@ import { LISTING_FEE_NPR } from './payments.constants.js';
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
-  constructor(@Inject(EsewaClient) private readonly esewa: EsewaClient) {}
+  constructor(
+    @Inject(EsewaClient) private readonly esewa: EsewaClient,
+    @Inject(KhaltiClient) private readonly khalti: KhaltiClient,
+  ) {}
 
-  // Step 1 of paying. Creates a payment record and returns what the browser needs to open eSewa.
-  async initiateEsewa(user: LocalUser, listingId: string) {
+  // The listing the owner wants to pay for. 404 if it does not exist, 403 if it is not theirs,
+  // 400 if it does not need a payment (only "waiting for payment" and "expired" do).
+  private async loadPayableListing(user: LocalUser, listingId: string) {
     const listing = await db.orm.public.Listing.where((l) =>
       and(l.id.eq(listingId), l.status.neq('removed')),
     ).first();
@@ -40,10 +50,15 @@ export class PaymentsService {
     if (listing.ownerId !== user.id) {
       throw new ForbiddenException('You can only pay for your own listings');
     }
-    // Only a listing that is waiting for payment (or ran out) can be paid for.
     if (listing.status !== 'pending_payment' && listing.status !== 'expired') {
       throw new BadRequestException('This listing does not need a payment');
     }
+    return listing;
+  }
+
+  // Step 1 of paying. Creates a payment record and returns what the browser needs to open eSewa.
+  async initiateEsewa(user: LocalUser, listingId: string) {
+    const listing = await this.loadPayableListing(user, listingId);
 
     // Our own id for this try. eSewa sends it back so we know which payment the reply is for.
     const transactionUuid = randomUUID();
@@ -181,5 +196,117 @@ export class PaymentsService {
       listingStatus: listing?.status ?? null,
       expiresAt: listing?.expiresAt?.toString() ?? null,
     };
+  }
+
+  // -------------------------------------------------------------------------
+  // Khalti
+  // -------------------------------------------------------------------------
+
+  // Step 1 of paying with Khalti. We start the payment on Khalti's server and
+  // return the address of the Khalti page the owner pays on.
+  async initiateKhalti(user: LocalUser, listingId: string) {
+    const listing = await this.loadPayableListing(user, listingId);
+
+    // Our own id for this try. Khalti sends it back (as purchase_order_id) so we can find the payment.
+    const transactionUuid = randomUUID();
+    const payment = await db.orm.public.Payment.create({
+      listingId: listing.id,
+      userId: user.id,
+      provider: 'khalti',
+      amount: LISTING_FEE_NPR,
+      transactionUuid,
+    });
+
+    let started: KhaltiPayment;
+    try {
+      started = await this.khalti.initiate({
+        returnUrl: `${env.clientUrl}/payment/khalti/success`,
+        websiteUrl: env.clientUrl,
+        amountPaisa: LISTING_FEE_NPR * 100,
+        purchaseOrderId: transactionUuid,
+        purchaseOrderName: 'FindMeAPlace listing (30 days)',
+      });
+    } catch (error) {
+      // The attempt never reached Khalti's payment page, so it counts as failed.
+      await db.orm.public.Payment.where({ id: payment.id }).update({
+        status: 'failed',
+      });
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Khalti initiate failed', error);
+      throw new ServiceUnavailableException(
+        'Could not start the Khalti payment. Try again in a moment.',
+      );
+    }
+
+    // Remember Khalti's id (pidx). Verify uses THIS stored value, never one from the browser.
+    await db.orm.public.Payment.where({ id: payment.id }).update({
+      transactionId: started.pidx,
+    });
+
+    return { paymentId: payment.id, paymentUrl: started.paymentUrl };
+  }
+
+  // Step 2 of paying with Khalti. The owner is back from Khalti; we ask Khalti what really happened.
+  async verifyKhalti(user: LocalUser, purchaseOrderId: string) {
+    // 1. It must be a Khalti payment we started, for this user.
+    const payment = await db.orm.public.Payment.where((p) =>
+      and(p.transactionUuid.eq(purchaseOrderId), p.provider.eq('khalti')),
+    ).first();
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
+    }
+    if (payment.userId !== user.id) {
+      throw new ForbiddenException('This payment belongs to someone else');
+    }
+
+    // 2. Already confirmed earlier (the owner reloaded the page): report it, change nothing.
+    if (payment.status === 'success') {
+      return this.summary(payment.id, payment.listingId, 'success');
+    }
+
+    // 3. Without Khalti's id the payment never reached Khalti's page.
+    const pidx = payment.transactionId;
+    if (!pidx) {
+      return this.summary(payment.id, payment.listingId, 'failed');
+    }
+
+    // 4. Ask Khalti directly. If we cannot reach it, say so: that is not "unpaid".
+    let status: KhaltiStatus;
+    try {
+      status = await this.khalti.lookup(pidx);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Khalti lookup failed', error);
+      throw new ServiceUnavailableException(
+        'Could not confirm the payment with Khalti. Try again in a moment.',
+      );
+    }
+
+    // 5. Still in progress: leave everything as it is, the owner can check again.
+    if (status.status === 'Pending' || status.status === 'Initiated') {
+      return this.summary(payment.id, payment.listingId, 'pending');
+    }
+
+    // 6. Paid in full, for exactly the price WE stored (paisa), never an amount from the browser.
+    if (
+      status.status === 'Completed' &&
+      status.totalAmount === payment.amount * 100
+    ) {
+      await this.activate(
+        payment.id,
+        payment.listingId,
+        status.transactionId ?? pidx,
+      );
+      return this.summary(payment.id, payment.listingId, 'success');
+    }
+
+    // 7. Anything else (cancelled, expired, refunded, wrong amount): not paid.
+    this.logger.warn(
+      `Payment ${payment.id} not accepted: Khalti says ${status.status}, amount ${status.totalAmount}`,
+    );
+    await db.orm.public.Payment.where((p) =>
+      and(p.id.eq(payment.id), p.status.eq('started')),
+    ).update({ status: 'failed' });
+    return this.summary(payment.id, payment.listingId, 'failed');
   }
 }

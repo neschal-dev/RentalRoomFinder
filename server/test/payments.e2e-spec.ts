@@ -23,6 +23,7 @@ import { AppModule } from '../src/app.module.js';
 import { ClerkAuthGuard } from '../src/auth/guard/guard.guard.js';
 import { env } from '../src/env.js';
 import { EsewaClient } from '../src/payments/esewa.client.js';
+import { KhaltiClient } from '../src/payments/khalti.client.js';
 import { db } from '../src/prisma/db.js';
 import { UsersService } from '../src/users/users.service.js';
 
@@ -50,6 +51,7 @@ const as = (clerkId: string) => ({ 'x-test-clerk-id': clerkId });
 
 // Stands in for eSewa's server, so the tests need no network. Each test says what "eSewa" answers.
 const fakeEsewa = { getStatus: vi.fn() };
+const fakeKhalti = { initiate: vi.fn(), lookup: vi.fn() };
 
 let app: INestApplication;
 let users: UsersService;
@@ -91,6 +93,8 @@ beforeAll(async () => {
     .useClass(FakeAuthGuard)
     .overrideProvider(EsewaClient)
     .useValue(fakeEsewa)
+    .overrideProvider(KhaltiClient)
+    .useValue(fakeKhalti)
     .compile();
 
   app = moduleRef.createNestApplication();
@@ -458,5 +462,260 @@ describe('POST /payments/esewa/verify', () => {
       esewaReply(start.body.fields.transaction_uuid),
     ).expect(200);
     expect((await listingNow(listing.id))?.status).toBe('active');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Khalti
+// ---------------------------------------------------------------------------
+
+// Starts a Khalti payment through the real endpoint. The fake Khalti answers with a pidx.
+async function startKhalti(clerkId: string) {
+  const owner = await users.findOrCreateByClerkId(clerkId);
+  const listing = await makeListing(owner.id, 'pending_payment');
+  fakeKhalti.initiate.mockResolvedValueOnce({
+    pidx: `pidx-${listing.id}`,
+    paymentUrl: 'https://test-pay.khalti.com/?pidx=abc',
+  });
+  const response = await request(app.getHttpServer())
+    .post('/payments/khalti/initiate')
+    .set(as(clerkId))
+    .send({ listingId: listing.id })
+    .expect(200);
+  const payment = await db.orm.public.Payment.where({
+    id: response.body.paymentId,
+  }).first();
+  return {
+    listingId: listing.id,
+    paymentId: response.body.paymentId as string,
+    purchaseOrderId: payment!.transactionUuid,
+    pidx: `pidx-${listing.id}`,
+  };
+}
+
+const verifyKhalti = (clerkId: string, purchaseOrderId: string) =>
+  request(app.getHttpServer())
+    .post('/payments/khalti/verify')
+    .set(as(clerkId))
+    .send({ purchaseOrderId });
+
+describe('POST /payments/khalti/initiate', () => {
+  beforeEach(() => {
+    fakeKhalti.initiate.mockReset();
+    fakeKhalti.lookup.mockReset();
+  });
+
+  it('needs a login', async () => {
+    await request(app.getHttpServer())
+      .post('/payments/khalti/initiate')
+      .send({ listingId: '00000000-0000-4000-8000-000000000001' })
+      .expect(401);
+  });
+
+  it('starts a payment on Khalti and returns the page address', async () => {
+    const { paymentId, purchaseOrderId, pidx } = await startKhalti('k_owner');
+
+    // Khalti was asked for NPR 200, in paisa, using OUR payment id.
+    const call = fakeKhalti.initiate.mock.calls[0]![0];
+    expect(call.amountPaisa).toBe(20000);
+    expect(call.purchaseOrderId).toBe(purchaseOrderId);
+    expect(call.returnUrl).toBe(`${env.clientUrl}/payment/khalti/success`);
+
+    const saved = await db.orm.public.Payment.where({ id: paymentId }).first();
+    expect(saved?.provider).toBe('khalti');
+    expect(saved?.amount).toBe(200);
+    expect(saved?.status).toBe('started');
+    // Khalti's id is remembered so verify can use it.
+    expect(saved?.transactionId).toBe(pidx);
+  });
+
+  it('ignores an amount sent by the browser', async () => {
+    const owner = await users.findOrCreateByClerkId('k_owner');
+    const listing = await makeListing(owner.id, 'pending_payment');
+    await request(app.getHttpServer())
+      .post('/payments/khalti/initiate')
+      .set(as('k_owner'))
+      .send({ listingId: listing.id, amount: 1 })
+      .expect(400);
+    expect(fakeKhalti.initiate).not.toHaveBeenCalled();
+  });
+
+  it("refuses someone else's listing and an active listing", async () => {
+    const owner = await users.findOrCreateByClerkId('k_owner');
+    await users.findOrCreateByClerkId('k_stranger');
+    const pending = await makeListing(owner.id, 'pending_payment');
+    const active = await makeListing(owner.id, 'active');
+    const call = (clerkId: string, listingId: string) =>
+      request(app.getHttpServer())
+        .post('/payments/khalti/initiate')
+        .set(as(clerkId))
+        .send({ listingId });
+
+    await call('k_stranger', pending.id).expect(403);
+    await call('k_owner', active.id).expect(400);
+    expect(fakeKhalti.initiate).not.toHaveBeenCalled();
+  });
+
+  it('answers 503 and marks the try failed when Khalti cannot start it', async () => {
+    const owner = await users.findOrCreateByClerkId('k_owner');
+    const listing = await makeListing(owner.id, 'pending_payment');
+    fakeKhalti.initiate.mockRejectedValue(new Error('Khalti down'));
+
+    await request(app.getHttpServer())
+      .post('/payments/khalti/initiate')
+      .set(as('k_owner'))
+      .send({ listingId: listing.id })
+      .expect(503);
+
+    const payments = await db.orm.public.Payment.where({
+      listingId: listing.id,
+    }).all();
+    expect(payments).toHaveLength(1);
+    expect(payments[0]?.status).toBe('failed');
+    expect((await listingNow(listing.id))?.status).toBe('pending_payment');
+  });
+});
+
+describe('POST /payments/khalti/verify', () => {
+  beforeEach(() => {
+    fakeKhalti.initiate.mockReset();
+    fakeKhalti.lookup.mockReset();
+  });
+
+  it('needs a login', async () => {
+    await request(app.getHttpServer())
+      .post('/payments/khalti/verify')
+      .send({ purchaseOrderId: '11111111-1111-4111-8111-111111111111' })
+      .expect(401);
+  });
+
+  it('rejects an id that is not a UUID', async () => {
+    await users.findOrCreateByClerkId('k_owner');
+    await verifyKhalti('k_owner', 'abc').expect(400);
+  });
+
+  it('returns 404 for a payment we never started', async () => {
+    await users.findOrCreateByClerkId('k_owner');
+    await verifyKhalti(
+      'k_owner',
+      '11111111-1111-4111-8111-111111111111',
+    ).expect(404);
+  });
+
+  it('does not accept an eSewa payment on the Khalti endpoint', async () => {
+    const { uuid } = await startPayment('k_owner');
+    await verifyKhalti('k_owner', uuid).expect(404);
+  });
+
+  it("refuses someone else's payment", async () => {
+    const { purchaseOrderId } = await startKhalti('k_owner');
+    await users.findOrCreateByClerkId('k_stranger');
+    await verifyKhalti('k_stranger', purchaseOrderId).expect(403);
+    expect(fakeKhalti.lookup).not.toHaveBeenCalled();
+  });
+
+  it('activates the listing for 30 days when Khalti confirms the full amount', async () => {
+    const { purchaseOrderId, listingId, paymentId, pidx } =
+      await startKhalti('k_owner');
+    fakeKhalti.lookup.mockResolvedValue({
+      status: 'Completed',
+      totalAmount: 20000,
+      transactionId: 'KH-TXN-1',
+    });
+
+    const response = await verifyKhalti('k_owner', purchaseOrderId).expect(200);
+    expect(response.body.paymentStatus).toBe('success');
+    expect(response.body.listingStatus).toBe('active');
+    // Khalti was asked about the pidx WE stored.
+    expect(fakeKhalti.lookup).toHaveBeenCalledWith(pidx);
+
+    const listing = await listingNow(listingId);
+    const days =
+      (new Date(listing!.expiresAt!.toString()).getTime() - Date.now()) /
+      86_400_000;
+    expect(days).toBeGreaterThan(29.9);
+    expect(days).toBeLessThanOrEqual(30);
+
+    const payment = await db.orm.public.Payment.where({
+      id: paymentId,
+    }).first();
+    expect(payment?.status).toBe('success');
+    expect(payment?.transactionId).toBe('KH-TXN-1');
+  });
+
+  it('does nothing the second time (a page reload)', async () => {
+    const { purchaseOrderId, listingId } = await startKhalti('k_owner');
+    fakeKhalti.lookup.mockResolvedValue({
+      status: 'Completed',
+      totalAmount: 20000,
+      transactionId: 'KH-TXN-2',
+    });
+    await verifyKhalti('k_owner', purchaseOrderId).expect(200);
+    const first = (await listingNow(listingId))!.expiresAt!.toString();
+
+    fakeKhalti.lookup.mockClear();
+    const again = await verifyKhalti('k_owner', purchaseOrderId).expect(200);
+    expect(again.body.paymentStatus).toBe('success');
+    expect(fakeKhalti.lookup).not.toHaveBeenCalled();
+    expect((await listingNow(listingId))!.expiresAt!.toString()).toBe(first);
+  });
+
+  it('does not activate when Khalti says a different amount was paid', async () => {
+    const { purchaseOrderId, listingId, paymentId } =
+      await startKhalti('k_owner');
+    fakeKhalti.lookup.mockResolvedValue({
+      status: 'Completed',
+      totalAmount: 2000,
+      transactionId: 'X',
+    });
+
+    const response = await verifyKhalti('k_owner', purchaseOrderId).expect(200);
+    expect(response.body.paymentStatus).toBe('failed');
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+    expect(
+      (await db.orm.public.Payment.where({ id: paymentId }).first())?.status,
+    ).toBe('failed');
+  });
+
+  it('treats a cancelled payment as failed', async () => {
+    const { purchaseOrderId, listingId } = await startKhalti('k_owner');
+    fakeKhalti.lookup.mockResolvedValue({
+      status: 'User canceled',
+      totalAmount: null,
+      transactionId: null,
+    });
+
+    const response = await verifyKhalti('k_owner', purchaseOrderId).expect(200);
+    expect(response.body.paymentStatus).toBe('failed');
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+  });
+
+  it('leaves everything as it is while Khalti says Pending', async () => {
+    const { purchaseOrderId, listingId, paymentId } =
+      await startKhalti('k_owner');
+    fakeKhalti.lookup.mockResolvedValue({
+      status: 'Pending',
+      totalAmount: 20000,
+      transactionId: null,
+    });
+
+    const response = await verifyKhalti('k_owner', purchaseOrderId).expect(200);
+    expect(response.body.paymentStatus).toBe('pending');
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+    expect(
+      (await db.orm.public.Payment.where({ id: paymentId }).first())?.status,
+    ).toBe('started');
+  });
+
+  it('answers 503 and changes nothing when Khalti cannot be reached', async () => {
+    const { purchaseOrderId, listingId, paymentId } =
+      await startKhalti('k_owner');
+    fakeKhalti.lookup.mockRejectedValue(new Error('network down'));
+
+    await verifyKhalti('k_owner', purchaseOrderId).expect(503);
+    expect((await listingNow(listingId))?.status).toBe('pending_payment');
+    expect(
+      (await db.orm.public.Payment.where({ id: paymentId }).first())?.status,
+    ).toBe('started');
   });
 });
