@@ -20,6 +20,8 @@ type UploadSignature = {
 export async function uploadMedia(
   api: AxiosInstance,
   file: File,
+  // Called while the file is on its way, with 0 to 100.
+  onProgress?: (percent: number) => void,
 ): Promise<{ url: string; mediaType: MediaType }> {
   const mediaType: MediaType = file.type.startsWith("video/")
     ? "video"
@@ -49,6 +51,13 @@ export async function uploadMedia(
   const { data } = await axios.post<{ secure_url: string }>(
     permit.uploadUrl,
     form,
+    {
+      onUploadProgress: (event) => {
+        if (onProgress && event.total) {
+          onProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      },
+    },
   );
   return { url: data.secure_url, mediaType };
 }

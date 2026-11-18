@@ -46,7 +46,8 @@ export type PublicLocation = {
 };
 
 // One card on the search page. Only the first photo is sent.
-export type ListingCard = ListingFields & PublicLocation & { cover: Media | null };
+export type ListingCard = ListingFields &
+  PublicLocation & { cover: Media | null };
 
 // The public detail page.
 export type ListingDetail = ListingFields &
@@ -148,3 +149,7 @@ export const PARKING_LABELS: Record<Parking, string> = {
 export function isNew(createdAt: string): boolean {
   return Date.now() - new Date(createdAt).getTime() < 7 * 24 * 60 * 60 * 1000;
 }
+
+// Photo and video rules. The server checks the same ones.
+export const MIN_PHOTOS = 3;
+export const MAX_MEDIA = 15;

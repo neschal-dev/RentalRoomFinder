@@ -5,14 +5,12 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { createApi } from "@/lib/api";
-import { ImagePlus, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { DEMO } from "@/lib/demo";
 import { SAMPLE_FACILITIES } from "@/lib/sample-listings";
-import { uploadMedia } from "@/lib/upload";
+import { MediaUploader } from "@/components/media-uploader";
 import {
   CITIES,
   CITY_CENTERS,
@@ -25,6 +23,7 @@ import {
   errorLines,
   type City,
   type Facility,
+  MIN_PHOTOS,
   type MediaType,
   type MyListing,
 } from "@/lib/listings";
@@ -126,41 +125,19 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
     );
   }
 
-  // Uploads the chosen files one after another and adds them to the list.
-  async function addFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    if (DEMO) {
-      setErrors(["Demo mode is on, so uploads are turned off."]);
-      return;
-    }
-    setErrors([]);
-    setUploading(true);
-    const added: { url: string; mediaType: MediaType }[] = [];
-    try {
-      for (const file of Array.from(files)) {
-        if (media.length + added.length >= 15) {
-          setErrors(["A listing can have at most 15 photos and videos."]);
-          break;
-        }
-        added.push(await uploadMedia(api, file));
-      }
-    } catch (error) {
-      setErrors(
-        error instanceof Error && !("response" in error)
-          ? [error.message]
-          : errorLines(error),
-      );
-    }
-    // Keep what uploaded fine, even if a later file failed.
-    setMedia((list) => [...list, ...added]);
-    setUploading(false);
-  }
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     setErrors([]);
     if (DEMO) {
       setErrors(["Demo mode is on, so nothing is saved."]);
+      return;
+    }
+    const photos = media.filter((m) => m.mediaType === "image").length;
+    if (photos < MIN_PHOTOS) {
+      setErrors([
+        `Add at least ${MIN_PHOTOS} photos before you ${existing ? "save" : "post"} (you have ${photos}).`,
+      ]);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     setSaving(true);
@@ -440,7 +417,9 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
               className="mt-1 size-4"
             />
             <span>
-              <span className="font-medium">Show the exact location on the map</span>
+              <span className="font-medium">
+                Show the exact location on the map
+              </span>
               <span className="block text-muted-foreground">
                 {showExactLocation
                   ? "Visitors will see a pin on the property."
@@ -453,70 +432,17 @@ export function ListingForm({ existing }: { existing?: MyListing }) {
 
       <Section
         title="Photos and videos"
-        description="Up to 15. The first one is the cover."
+        description="Show the room, the bathroom and the building. At least 3 photos; a video is optional."
       >
-        {media.length > 0 && (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {media.map((item, index) => (
-              <li key={item.url} className="relative">
-                {item.mediaType === "image" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.url}
-                    alt=""
-                    className="aspect-[4/3] w-full rounded-lg object-cover"
-                  />
-                ) : (
-                  <video
-                    src={item.url}
-                    className="aspect-[4/3] w-full rounded-lg object-cover"
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setMedia((list) => list.filter((_, i) => i !== index))
-                  }
-                  className="absolute right-1.5 top-1.5 flex size-7 cursor-pointer items-center justify-center rounded-full bg-black/70 text-white"
-                  aria-label="Remove this file"
-                >
-                  <X className="size-4" />
-                </button>
-                {index === 0 && (
-                  <Badge tone="solid" className="absolute bottom-1.5 left-1.5">
-                    Cover
-                  </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {media.length < 15 && (
-          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border px-6 py-8 text-center text-sm hover:bg-muted">
-            <ImagePlus
-              className="size-6 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span className="font-medium">
-              {uploading ? "Uploading…" : "Choose photos or videos"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Photos up to 10 MB, videos up to 100 MB
-            </span>
-            <input
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              disabled={uploading}
-              onChange={(e) => {
-                void addFiles(e.target.files);
-                e.target.value = ""; // so the same file can be picked again
-              }}
-              className="sr-only"
-            />
-          </label>
-        )}
+        <MediaUploader
+          initial={media}
+          api={api}
+          onChange={(done, busy) => {
+            setMedia(done);
+            setUploading(busy);
+          }}
+          onError={(message) => setErrors(message ? [message] : [])}
+        />
       </Section>
 
       <div className="flex items-center justify-end gap-3">
