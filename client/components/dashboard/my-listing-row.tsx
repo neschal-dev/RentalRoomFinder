@@ -34,7 +34,7 @@ export function MyListingRow({
   const cover = listing.media.find((m) => m.mediaType === "image");
 
   return (
-    <Card className="flex flex-col gap-4 p-3 sm:flex-row sm:items-center">
+    <Card className="flex flex-col gap-4 p-3 sm:flex-row sm:flex-wrap sm:items-center">
       <div className="h-32 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:h-20 sm:w-28">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -84,14 +84,7 @@ export function MyListingRow({
         </p>
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-start gap-2">
-        {/* Only the owner's dashboard passes onDelete; the pay button belongs there too. */}
-        {onDelete && listing.status === "pending_payment" && (
-          <PayButton listingId={listing.id} />
-        )}
-        {onDelete && listing.status === "expired" && (
-          <PayButton listingId={listing.id} renew />
-        )}
+      <div className="flex shrink-0 gap-2">
         {listing.status === "active" && (
           <Link
             href={`/listings/${listing.id}`}
@@ -116,6 +109,18 @@ export function MyListingRow({
           </Button>
         )}
       </div>
+
+      {/* Paying belongs to the owner's dashboard, so it only shows when onDelete is passed. */}
+      {onDelete &&
+        (listing.status === "pending_payment" ||
+          listing.status === "expired") && (
+          <div className="flex w-full justify-end border-t border-border pt-3 sm:basis-full">
+            <PayButton
+              listingId={listing.id}
+              renew={listing.status === "expired"}
+            />
+          </div>
+        )}
     </Card>
   );
 }

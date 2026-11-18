@@ -66,6 +66,22 @@ function readEsewa() {
   };
 }
 
+// Khalti settings. The secret key comes from the Khalti merchant dashboard.
+// Without it the server still starts: Khalti payments just answer "not set up".
+function readKhalti() {
+  return {
+    secretKey:
+      process.env['NODE_ENV'] === 'production'
+        ? required('KHALTI_SECRET_KEY')
+        : (process.env['KHALTI_SECRET_KEY'] ?? ''),
+    // The test (sandbox) server by default. Production sets KHALTI_BASE_URL=https://khalti.com/api/v2
+    baseUrl: withTestDefault(
+      'KHALTI_BASE_URL',
+      'https://dev.khalti.com/api/v2',
+    ),
+  };
+}
+
 // Every setting the server needs, in one typed object. Use it as: env.databaseUrl
 export const env = {
   port: readPort(),
@@ -75,6 +91,7 @@ export const env = {
   clerkSecretKey: required('CLERK_SECRET_KEY'),
   cloudinary: readCloudinary(), // where photos and videos are stored
   esewa: readEsewa(), // payments
+  khalti: readKhalti(), // payments
 };
 
 // All variables were checked above. If any is missing, stop now with one clear message.

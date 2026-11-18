@@ -10,7 +10,16 @@ export type InitiateResponse = {
   fields: Record<string, string>;
 };
 
-// What POST /payments/esewa/verify gives back.
+// What POST /payments/khalti/initiate gives back: the Khalti page to send the owner to.
+export type KhaltiInitiateResponse = {
+  paymentId: string;
+  paymentUrl: string;
+};
+
+// The two ways to pay.
+export type Provider = "khalti" | "esewa";
+
+// What POST /payments/<provider>/verify gives back.
 export type VerifyResponse = {
   paymentId: string;
   paymentStatus: "success" | "pending" | "failed";
