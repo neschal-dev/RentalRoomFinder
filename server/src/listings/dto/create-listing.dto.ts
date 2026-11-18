@@ -127,7 +127,7 @@ export class CreateListingDto {
   @IsUUID('all', { each: true })
   facilityIds?: string[];
 
-  // Photos and videos. Uploading them comes in a later module.
+  // Photos and videos, already uploaded to Cloudinary. At least 3 photos are needed (see media-rules.ts).
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(15)

@@ -55,6 +55,12 @@ function payload(overrides: Record<string, unknown> = {}) {
     latitude: 27.6298,
     longitude: 85.5218,
     availableFrom: '2026-12-01',
+    // A listing needs at least three photos.
+    media: [
+      { url: 'https://example.com/default-1.jpg', mediaType: 'image' },
+      { url: 'https://example.com/default-2.jpg', mediaType: 'image' },
+      { url: 'https://example.com/default-3.jpg', mediaType: 'image' },
+    ],
     ...overrides,
   };
 }
@@ -142,6 +148,45 @@ describe('creating a listing', () => {
     expect(messages).toContain('property status should not exist'); // owner may not set status
   });
 
+  describe('photo and video rules', () => {
+    const photo = (n: number) => ({
+      url: `https://example.com/p${n}.jpg`,
+      mediaType: 'image',
+    });
+    const video = { url: 'https://example.com/v.mp4', mediaType: 'video' };
+    const create = (media: unknown) =>
+      http()
+        .post('/listings')
+        .set(as('creator-media'))
+        .send(payload({ media }));
+
+    it('needs at least three photos', async () => {
+      await makeUser('creator-media', true);
+      const none = await create([]).expect(400);
+      expect(JSON.stringify(none.body)).toContain('at least 3 photos');
+      await create([photo(1), photo(2)]).expect(400);
+    });
+
+    it('does not count videos as photos', async () => {
+      await makeUser('creator-media', true);
+      await create([photo(1), photo(2), video, video]).expect(400);
+    });
+
+    it('does not accept a video as the cover', async () => {
+      await makeUser('creator-media', true);
+      const res = await create([video, photo(1), photo(2), photo(3)]).expect(
+        400,
+      );
+      expect(JSON.stringify(res.body)).toContain('cover');
+    });
+
+    it('accepts three photos with no video, and with a video', async () => {
+      await makeUser('creator-media', true);
+      await create([photo(1), photo(2), photo(3)]).expect(201);
+      await create([photo(1), photo(2), photo(3), video]).expect(201);
+    });
+  });
+
   it('puts the first post of a verified user live for free', async () => {
     const user = await makeUser('creator-free', true);
     const res = await http()
@@ -153,6 +198,7 @@ describe('creating a listing', () => {
           media: [
             { url: 'https://example.com/a.jpg', mediaType: 'image' },
             { url: 'https://example.com/b.jpg', mediaType: 'image' },
+            { url: 'https://example.com/c.jpg', mediaType: 'image' },
           ],
         }),
       )
@@ -167,6 +213,7 @@ describe('creating a listing', () => {
     expect(res.body.media.map((m: { url: string }) => m.url)).toEqual([
       'https://example.com/a.jpg',
       'https://example.com/b.jpg',
+      'https://example.com/c.jpg',
     ]);
 
     // About 30 days from now.
@@ -661,7 +708,11 @@ describe('editing and deleting', () => {
       .set(as('owner'))
       .send({
         facilityIds: [facilityIds.water],
-        media: [{ url: 'https://example.com/new.jpg', mediaType: 'image' }],
+        media: [
+          { url: 'https://example.com/new-1.jpg', mediaType: 'image' },
+          { url: 'https://example.com/new-2.jpg', mediaType: 'image' },
+          { url: 'https://example.com/new-3.jpg', mediaType: 'image' },
+        ],
       })
       .expect(200);
 
@@ -669,7 +720,9 @@ describe('editing and deleting', () => {
       '24h water',
     ]);
     expect(res.body.media.map((m: { url: string }) => m.url)).toEqual([
-      'https://example.com/new.jpg',
+      'https://example.com/new-1.jpg',
+      'https://example.com/new-2.jpg',
+      'https://example.com/new-3.jpg',
     ]);
 
     const again = await http()
@@ -678,7 +731,26 @@ describe('editing and deleting', () => {
       .send({ bedrooms: 2 })
       .expect(200);
     expect(again.body.facilities).toHaveLength(1); // not wiped by an unrelated edit
-    expect(again.body.media).toHaveLength(1);
+    expect(again.body.media).toHaveLength(3);
+  });
+
+  it('refuses a photo list that breaks the rules and keeps the old one', async () => {
+    const before = await http().get(`/listings/${listingId}`).expect(200);
+    const patch = (media: unknown) =>
+      http().patch(`/listings/${listingId}`).set(as('owner')).send({ media });
+
+    await patch([
+      { url: 'https://example.com/one.jpg', mediaType: 'image' },
+    ]).expect(400);
+    await patch([
+      { url: 'https://example.com/v.mp4', mediaType: 'video' },
+      { url: 'https://example.com/1.jpg', mediaType: 'image' },
+      { url: 'https://example.com/2.jpg', mediaType: 'image' },
+      { url: 'https://example.com/3.jpg', mediaType: 'image' },
+    ]).expect(400);
+
+    const after = await http().get(`/listings/${listingId}`).expect(200);
+    expect(after.body.media).toEqual(before.body.media);
   });
 
   it('does not let the owner set status, owner or fair price', async () => {

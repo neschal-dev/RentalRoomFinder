@@ -31,3 +31,6 @@ export const NEPAL_BOUNDS = {
   minLongitude: 80.0,
   maxLongitude: 88.3,
 } as const;
+
+// A listing needs at least this many photos. Videos are optional and do not count.
+export const MIN_PHOTOS = 3;

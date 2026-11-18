@@ -20,6 +20,7 @@ import {
   MY_LISTINGS_LIMIT,
 } from './listings.constants.js';
 import { toOwnerView, toPublicCard, toPublicDetail } from './listings.views.js';
+import { assertMediaRules } from './media-rules.js';
 
 // Makes text safe to put inside a LIKE pattern: "50%" must not mean "50 and anything".
 function escapeLike(text: string): string {
@@ -42,6 +43,8 @@ export class ListingsService {
   async create(user: LocalUser, input: CreateListingDto) {
     const facilityIds = [...new Set(input.facilityIds ?? [])];
     await this.assertFacilitiesExist(facilityIds);
+    // A new listing must come with its photos (checked before anything is saved).
+    assertMediaRules(input.media ?? []);
 
     // The free first post needs a verified phone number. Clerk is the source of truth for that,
     // so we ask it before opening the database transaction (a network call should not hold one open).
@@ -236,6 +239,11 @@ export class ListingsService {
     }
 
     await this.assertOwner(user, id);
+
+    // Sending a new media list replaces the old one, so the new list must follow the rules too.
+    if (input.media) {
+      assertMediaRules(input.media);
+    }
 
     const facilityIds = input.facilityIds
       ? [...new Set(input.facilityIds)]
