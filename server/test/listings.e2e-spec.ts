@@ -77,6 +77,7 @@ const as = (clerkId: string) => ({ 'x-test-clerk-id': clerkId });
 
 // Empties the tables (children first because of the foreign keys).
 async function wipe() {
+  await db.orm.public.Payment.where((p) => p.id.isNotNull()).deleteAll();
   await db.orm.public.ListingMedia.where((m) => m.id.isNotNull()).deleteAll();
   await db.orm.public.ListingFacility.where((f) =>
     f.listingId.isNotNull(),

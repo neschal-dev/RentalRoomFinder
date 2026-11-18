@@ -192,7 +192,10 @@ model Payment {
   provider      PaymentProvider
   amount        Int // NPR
   status        PaymentStatus    @default(Started)
-  transactionId String? // the provider's transaction id, known after the provider replies
+  // OUR id for this try. We create it before the user pays and send it to the provider,
+  // which sends it back, so we can match the reply to the right payment.
+  transactionUuid String         @unique
+  transactionId String? // the provider's own code, known after the provider replies
   createdAt     DateTime         @default(now())
   updatedAt     temporal.UpdatedAt
 
