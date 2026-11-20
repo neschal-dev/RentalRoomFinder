@@ -1,15 +1,12 @@
 import {
   BadRequestException,
   ForbiddenException,
-  Inject,
   Injectable,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { and } from '@prisma/orm-postgres/orm-client';
 import type { LocalUser } from '../auth/types/local-user.type.js';
 import { db } from '../prisma/db.js';
-import { UsersService } from '../users/users.service.js';
 import type { CreateListingDto } from './dto/create-listing.dto.js';
 import type { SearchListingsDto } from './dto/search-listings.dto.js';
 import type { UpdateListingDto } from './dto/update-listing.dto.js';
@@ -34,8 +31,6 @@ function expiryFromNow(days: number) {
 
 @Injectable()
 export class ListingsService {
-  constructor(@Inject(UsersService) private readonly users: UsersService) {}
-
   // -------------------------------------------------------------------------
   // Create
   // -------------------------------------------------------------------------
@@ -46,22 +41,7 @@ export class ListingsService {
     // A new listing must come with its photos (checked before anything is saved).
     assertMediaRules(input.media ?? []);
 
-    // The free first post needs a verified phone number. Clerk is the source of truth for that,
-    // so we ask it before opening the database transaction (a network call should not hold one open).
-    const phoneVerified = await this.isPhoneVerified(user);
-    const mayUseFreePost = !user.freePostUsed && phoneVerified;
-
     const listingId = await db.transaction(async (tx) => {
-      // Claim the free post. The UPDATE only matches while freePostUsed is still false,
-      // so if two requests arrive together, only one of them wins.
-      let isFree = false;
-      if (mayUseFreePost) {
-        const claimed = await tx.orm.public.User.where((u) =>
-          and(u.id.eq(user.id), u.freePostUsed.eq(false)),
-        ).update({ freePostUsed: true });
-        isFree = claimed !== null;
-      }
-
       const listing = await tx.orm.public.Listing.create({
         ownerId: user.id,
         title: input.title,
@@ -81,10 +61,9 @@ export class ListingsService {
         longitude: input.longitude,
         showExactLocation: input.showExactLocation ?? false,
         availableFrom: Temporal.PlainDate.from(input.availableFrom),
-        // A free post goes live at once. Otherwise the listing waits for payment,
-        // and the payment module sets status "active" and the expiry date.
-        status: isFree ? 'active' : 'pending_payment',
-        expiresAt: isFree ? expiryFromNow(LISTING_DURATION_DAYS) : null,
+        // Posting is free: a new listing goes live at once and stays visible for 30 days.
+        status: 'active',
+        expiresAt: expiryFromNow(LISTING_DURATION_DAYS),
       });
 
       for (const facilityId of facilityIds) {
@@ -319,6 +298,35 @@ export class ListingsService {
     });
   }
 
+  // Puts a listing back online for another 30 days. Free.
+  // Allowed when the listing has ended: marked "expired", past its end date, or (an older
+  // listing from when posting needed payment) still waiting for payment.
+  // A listing hidden by a moderator is not "ended", so it cannot be brought back this way.
+  async renew(user: LocalUser, id: string) {
+    await this.assertOwner(user, id);
+    const listing = await db.orm.public.Listing.where({ id }).first();
+
+    const pastEndDate =
+      listing?.status === 'active' &&
+      listing.expiresAt !== null &&
+      new Date(listing.expiresAt.toString()).getTime() <= Date.now();
+    const ended =
+      listing?.status === 'expired' ||
+      listing?.status === 'pending_payment' ||
+      pastEndDate;
+    if (!ended) {
+      throw new BadRequestException('This listing is already live');
+    }
+
+    await db.orm.public.Listing.where((l) =>
+      and(l.id.eq(id), l.ownerId.eq(user.id)),
+    ).update({
+      status: 'active',
+      expiresAt: expiryFromNow(LISTING_DURATION_DAYS),
+    });
+    return this.getFull(id);
+  }
+
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
@@ -345,18 +353,6 @@ export class ListingsService {
     ).all();
     if (found.length !== facilityIds.length) {
       throw new BadRequestException('One or more facilityIds do not exist');
-    }
-  }
-
-  private async isPhoneVerified(user: LocalUser): Promise<boolean> {
-    try {
-      return await this.users.refreshPhoneVerified(user);
-    } catch {
-      // Clerk could not be reached. Do not guess: answering "not verified" would quietly push
-      // the user into paying for a post that should have been free.
-      throw new ServiceUnavailableException(
-        'Could not check your phone verification right now. Please try again.',
-      );
     }
   }
 

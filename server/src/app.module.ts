@@ -8,7 +8,6 @@ import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { ListingsModule } from './listings/listings.module.js';
 import { MediaModule } from './media/media.module.js';
-import { PaymentsModule } from './payments/payments.module.js';
 
 @Module({
   imports: [
@@ -18,7 +17,6 @@ import { PaymentsModule } from './payments/payments.module.js';
     AuthModule,
     ListingsModule,
     MediaModule,
-    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [

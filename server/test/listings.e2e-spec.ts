@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { ClerkAuthGuard } from '../src/auth/guard/guard.guard.js';
 import { env } from '../src/env.js';
@@ -81,6 +81,29 @@ const byText = (a: string, b: string) => a.localeCompare(b);
 
 const as = (clerkId: string) => ({ 'x-test-clerk-id': clerkId });
 
+// A listing made straight in the database, with the status the test needs.
+async function createDirect(
+  ownerId: string,
+  status: 'active' | 'pending_payment' | 'expired' | 'hidden',
+  overrides: Record<string, unknown> = {},
+) {
+  return db.orm.public.Listing.create({
+    ownerId,
+    title: 'Listing made for a test',
+    description: 'A listing created directly in the database for a test.',
+    propertyType: 'room',
+    bedrooms: 1,
+    rentPrice: 8000,
+    city: 'Banepa',
+    area: 'Banepa Bazaar',
+    latitude: 27.6298,
+    longitude: 85.5218,
+    availableFrom: Temporal.PlainDate.from('2026-12-01'),
+    status,
+    ...overrides,
+  });
+}
+
 // Empties the tables (children first because of the foreign keys).
 async function wipe() {
   await db.orm.public.Payment.where((p) => p.id.isNotNull()).deleteAll();
@@ -102,11 +125,6 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication();
   await app.init();
   users = moduleRef.get(UsersService);
-
-  // Do not call the real Clerk API. "Phone verified" is whatever the database says.
-  vi.spyOn(UsersService.prototype, 'refreshPhoneVerified').mockImplementation(
-    async (user) => user.phoneVerified,
-  );
 
   await wipe();
   const wifi = await db.orm.public.Facility.create({ name: 'WiFi' });
@@ -187,11 +205,11 @@ describe('creating a listing', () => {
     });
   });
 
-  it('puts the first post of a verified user live for free', async () => {
-    const user = await makeUser('creator-free', true);
+  it('puts a new listing live at once, for 30 days', async () => {
+    const user = await makeUser('creator-live', true);
     const res = await http()
       .post('/listings')
-      .set(as('creator-free'))
+      .set(as('creator-live'))
       .send(
         payload({
           facilityIds: [facilityIds.wifi, facilityIds.water],
@@ -220,75 +238,19 @@ describe('creating a listing', () => {
     const days = (Date.parse(res.body.expiresAt) - Date.now()) / 86_400_000;
     expect(days).toBeGreaterThan(29.9);
     expect(days).toBeLessThan(30.1);
-
-    const after = await db.orm.public.User.where({ id: user.id }).first();
-    expect(after?.freePostUsed).toBe(true);
   });
 
-  it('makes the second post wait for payment', async () => {
-    const res = await http()
-      .post('/listings')
-      .set(as('creator-free'))
-      .send(payload({ title: 'Second property of the same owner' }))
-      .expect(201);
-
-    expect(res.body.status).toBe('pending_payment');
-    expect(res.body.expiresAt).toBeNull();
-  });
-
-  it('does not use the free post for a user without a verified phone', async () => {
-    const user = await makeUser('creator-unverified', false);
-    const res = await http()
-      .post('/listings')
-      .set(as('creator-unverified'))
-      .send(payload())
-      .expect(201);
-
-    expect(res.body.status).toBe('pending_payment');
-    const after = await db.orm.public.User.where({ id: user.id }).first();
-    expect(after?.freePostUsed).toBe(false); // the free post is still there for later
-  });
-
-  it('gives the free post to only one of two simultaneous requests', async () => {
-    await makeUser('creator-race', true);
-    const [a, b] = await Promise.all([
-      http()
+  it('puts every post live, not only the first, and needs no verified phone', async () => {
+    await makeUser('creator-many', false);
+    for (const title of ['First property', 'Second property']) {
+      const res = await http()
         .post('/listings')
-        .set(as('creator-race'))
-        .send(payload({ title: 'Race listing one' })),
-      http()
-        .post('/listings')
-        .set(as('creator-race'))
-        .send(payload({ title: 'Race listing two' })),
-    ]);
-
-    expect([a.status, b.status]).toEqual([201, 201]);
-    expect([a.body.status, b.body.status].sort(byText)).toEqual([
-      'active',
-      'pending_payment',
-    ]);
-  });
-
-  it('answers 503 when Clerk cannot be reached, and creates nothing', async () => {
-    await makeUser('creator-clerk-down', false);
-    const before = await db.orm.public.Listing.aggregate((a) => ({
-      total: a.count(),
-    }));
-
-    const spy = vi
-      .spyOn(UsersService.prototype, 'refreshPhoneVerified')
-      .mockRejectedValueOnce(new Error('clerk down'));
-    await http()
-      .post('/listings')
-      .set(as('creator-clerk-down'))
-      .send(payload())
-      .expect(503);
-    spy.mockClear();
-
-    const after = await db.orm.public.Listing.aggregate((a) => ({
-      total: a.count(),
-    }));
-    expect(after.total).toBe(before.total);
+        .set(as('creator-many'))
+        .send(payload({ title }))
+        .expect(201);
+      expect(res.body.status).toBe('active');
+      expect(res.body.expiresAt).not.toBeNull();
+    }
   });
 
   it('rejects a facility id that does not exist', async () => {
@@ -483,12 +445,11 @@ describe('searching and viewing', () => {
       expect(res.body.status).toBe('active');
     }
     // One listing that is not live: it must never show up in public results.
-    await makeUser('seed-pending', false);
-    await http()
-      .post('/listings')
-      .set(as('seed-pending'))
-      .send(payload({ title: 'Waiting for payment' }))
-      .expect(201);
+    // It is an older listing from when posting still needed payment, made straight in the database.
+    const old = await makeUser('seed-pending', false);
+    await createDirect(old.id, 'pending_payment', {
+      title: 'Waiting for payment',
+    });
   });
 
   const titles = (res: request.Response) =>
@@ -831,5 +792,103 @@ describe('editing and deleting', () => {
     // The row is kept (marked removed), so payments and reports can still point at it.
     const row = await db.orm.public.Listing.where({ id: listingId }).first();
     expect(row?.status).toBe('removed');
+  });
+});
+
+describe('renewing a listing', () => {
+  beforeAll(async () => {
+    await wipe();
+  });
+
+  const renew = (clerkId: string, id: string) =>
+    http().post(`/listings/${id}/renew`).set(as(clerkId));
+
+  const daysLeft = (iso: string) => (Date.parse(iso) - Date.now()) / 86_400_000;
+
+  it('needs a login', async () => {
+    await http()
+      .post('/listings/0b6f1f4e-8f58-4e2f-9d6e-5a2c2d1b7c11/renew')
+      .expect(401);
+  });
+
+  it('puts an expired listing back online for 30 days', async () => {
+    const owner = await makeUser('renew-owner', false);
+    const listing = await createDirect(owner.id, 'expired', {
+      expiresAt: Temporal.Now.instant().subtract({ hours: 48 }),
+    });
+
+    const res = await renew('renew-owner', listing.id).expect(200);
+    expect(res.body.status).toBe('active');
+    expect(daysLeft(res.body.expiresAt)).toBeGreaterThan(29.9);
+    // It is public again.
+    await http().get(`/listings/${listing.id}`).expect(200);
+  });
+
+  it('renews a listing that is still marked live but is past its end date', async () => {
+    const owner = await makeUser('renew-owner', false);
+    const listing = await createDirect(owner.id, 'active', {
+      expiresAt: Temporal.Now.instant().subtract({ hours: 1 }),
+    });
+    await http().get(`/listings/${listing.id}`).expect(404);
+
+    // The owner is told the truth: it has ended, so it shows as expired.
+    const mine = await http()
+      .get('/listings/mine')
+      .set(as('renew-owner'))
+      .expect(200);
+    const row = mine.body.find((l: { id: string }) => l.id === listing.id);
+    expect(row.status).toBe('expired');
+
+    const res = await renew('renew-owner', listing.id).expect(200);
+    expect(daysLeft(res.body.expiresAt)).toBeGreaterThan(29.9);
+    await http().get(`/listings/${listing.id}`).expect(200);
+  });
+
+  it('publishes an older listing that was waiting for payment', async () => {
+    const owner = await makeUser('renew-owner', false);
+    const listing = await createDirect(owner.id, 'pending_payment');
+
+    const res = await renew('renew-owner', listing.id).expect(200);
+    expect(res.body.status).toBe('active');
+    expect(res.body.expiresAt).not.toBeNull();
+  });
+
+  it('refuses a listing that is still live, so the 30 days cannot be stacked', async () => {
+    const owner = await makeUser('renew-owner', false);
+    const listing = await createDirect(owner.id, 'active', {
+      expiresAt: Temporal.Now.instant().add({ hours: 24 * 10 }),
+    });
+    const before = (await db.orm.public.Listing.where({
+      id: listing.id,
+    }).first())!;
+
+    await renew('renew-owner', listing.id).expect(400);
+    const after = (await db.orm.public.Listing.where({
+      id: listing.id,
+    }).first())!;
+    expect(after.expiresAt?.toString()).toBe(before.expiresAt?.toString());
+  });
+
+  it('does not bring back a listing a moderator hid', async () => {
+    const owner = await makeUser('renew-owner', false);
+    const listing = await createDirect(owner.id, 'hidden');
+    await renew('renew-owner', listing.id).expect(400);
+    const after = await db.orm.public.Listing.where({ id: listing.id }).first();
+    expect(after?.status).toBe('hidden');
+  });
+
+  it("refuses someone else's listing", async () => {
+    const owner = await makeUser('renew-owner', false);
+    await makeUser('renew-stranger', false);
+    const listing = await createDirect(owner.id, 'expired');
+    await renew('renew-stranger', listing.id).expect(403);
+  });
+
+  it('returns 404 for a listing that does not exist, 400 for a bad id', async () => {
+    await makeUser('renew-owner', false);
+    await renew('renew-owner', '0b6f1f4e-8f58-4e2f-9d6e-5a2c2d1b7c11').expect(
+      404,
+    );
+    await renew('renew-owner', 'not-a-uuid').expect(400);
   });
 });

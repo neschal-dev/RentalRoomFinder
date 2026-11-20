@@ -90,8 +90,17 @@ export function toOwnerView<
   Row extends Record<OwnerKey, unknown> &
     WithFacilityLinks & { media: unknown },
 >(row: Row) {
+  // A listing is saved as "active" until its 30 days run out, and nothing flips it afterwards.
+  // The owner should see the truth, so a listing past its end date is reported as "expired".
+  const endDate = row.expiresAt as { toString(): string } | null;
+  const pastEnd =
+    row.status === 'active' &&
+    endDate !== null &&
+    new Date(endDate.toString()).getTime() <= Date.now();
+
   return {
     ...pick(row, [...PUBLIC_KEYS, ...OWNER_EXTRA_KEYS]),
+    ...(pastEnd && { status: 'expired' as const }),
     media: row.media,
     facilities: flattenFacilities(row),
   };

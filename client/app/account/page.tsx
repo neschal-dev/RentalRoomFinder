@@ -3,19 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { BadgeCheck, Building2, Clock3, Gift, PlusCircle } from "lucide-react";
+import { Building2, Clock3, ListChecks, PlusCircle } from "lucide-react";
 import { MyListingRow } from "@/components/dashboard/my-listing-row";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { createApi, type MeResponse } from "@/lib/api";
-import { DEMO, DEMO_ME, sampleMine } from "@/lib/demo";
+import { createApi } from "@/lib/api";
+import { DEMO, sampleMine } from "@/lib/demo";
 import type { MyListing } from "@/lib/listings";
 
 // Dashboard home: a few numbers about the account and the latest listings.
 export default function OverviewPage() {
   const { isLoaded, getToken } = useAuth();
-  const [me, setMe] = useState<MeResponse | null>(DEMO ? DEMO_ME : null);
   const [listings, setListings] = useState<MyListing[] | null>(
     DEMO ? sampleMine() : null,
   );
@@ -23,23 +22,16 @@ export default function OverviewPage() {
 
   useEffect(() => {
     if (DEMO || !isLoaded) return;
-    const api = createApi(getToken);
-    Promise.all([
-      api.get<MeResponse>("/me"),
-      api.get<MyListing[]>("/listings/mine"),
-    ])
-      .then(([meResponse, listingsResponse]) => {
-        setMe(meResponse.data);
-        setListings(listingsResponse.data);
-      })
+    createApi(getToken)
+      .get<MyListing[]>("/listings/mine")
+      .then((response) => setListings(response.data))
       .catch(() =>
         setError("Could not reach the server, or the login was rejected."),
       );
   }, [isLoaded, getToken]);
 
   const live = listings?.filter((l) => l.status === "active").length ?? 0;
-  const waiting =
-    listings?.filter((l) => l.status === "pending_payment").length ?? 0;
+  const ended = listings?.filter((l) => l.status === "expired").length ?? 0;
 
   return (
     <>
@@ -62,7 +54,7 @@ export default function OverviewPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Stat
           icon={<Building2 />}
           label="Live now"
@@ -70,27 +62,15 @@ export default function OverviewPage() {
         />
         <Stat
           icon={<Clock3 />}
-          label="Waiting for payment"
-          value={listings ? String(waiting) : "…"}
+          label="Ended, ready to renew"
+          value={listings ? String(ended) : "…"}
         />
         <Stat
-          icon={<Gift />}
-          label="Free first post"
-          value={me ? (me.freePostUsed ? "Used" : "Available") : "…"}
-        />
-        <Stat
-          icon={<BadgeCheck />}
-          label="Phone number"
-          value={me ? (me.phoneVerified ? "Verified" : "Not verified") : "…"}
+          icon={<ListChecks />}
+          label="All your listings"
+          value={listings ? String(listings.length) : "…"}
         />
       </div>
-
-      {me && !me.phoneVerified && (
-        <p className="mt-4 rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning">
-          Verify your phone number in your account settings to get your first
-          post free.
-        </p>
-      )}
 
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between">

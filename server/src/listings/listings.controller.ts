@@ -66,6 +66,18 @@ export class ListingsController {
   }
 
   // DELETE /listings/:id   (login needed, owner only)
+  // POST /listings/:id/renew   (owner only)
+  // Free: puts an ended listing back online for another 30 days.
+  @Post(':id/renew')
+  @HttpCode(200)
+  @UseGuards(ClerkAuthGuard)
+  renew(
+    @CurrentUser() user: LocalUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.listings.renew(user, id);
+  }
+
   @Delete(':id')
   @HttpCode(204)
   @UseGuards(ClerkAuthGuard)

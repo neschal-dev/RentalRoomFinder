@@ -83,6 +83,20 @@ function MyListings() {
     }
   }
 
+  // Puts an ended listing back online. Free. The server answers with the updated listing.
+  async function renew(id: string) {
+    if (DEMO) {
+      setError("Renewing is switched off in demo mode.");
+      return;
+    }
+    const response = await createApi(getToken).post<MyListing>(
+      `/listings/${id}/renew`,
+    );
+    setItems(
+      (list) => list?.map((l) => (l.id === id ? response.data : l)) ?? null,
+    );
+  }
+
   const created = search.get("created");
 
   return (
@@ -90,12 +104,6 @@ function MyListings() {
       {created === "active" && (
         <Notice tone="success">
           Your listing is live. It stays visible for 30 days.
-        </Notice>
-      )}
-      {created === "pending_payment" && (
-        <Notice tone="warning">
-          Your listing is saved but not live yet. Pay NPR 200 with Khalti or
-          eSewa to publish it for 30 days.
         </Notice>
       )}
       {search.get("saved") && <Notice tone="success">Changes saved.</Notice>}
@@ -119,7 +127,7 @@ function MyListings() {
             You have not posted a place yet
           </p>
           <p className="max-w-sm text-muted-foreground">
-            Your first post is free once your phone number is verified.
+            Posting is free. Your listing goes live as soon as you save it.
           </p>
           <Link
             href="/account/listings/new"
@@ -132,7 +140,12 @@ function MyListings() {
 
       <ul className="space-y-3">
         {items?.map((l) => (
-          <MyListingRow key={l.id} listing={l} onDelete={remove} />
+          <MyListingRow
+            key={l.id}
+            listing={l}
+            onDelete={remove}
+            onRenew={renew}
+          />
         ))}
       </ul>
     </>

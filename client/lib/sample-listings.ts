@@ -116,7 +116,6 @@ const ROWS: Row[] = [
     availableInDays: 3,
     facilities: ["24h water"],
     photos: ["student-room", "student-desk"],
-    status: "pending_payment",
     postedDaysAgo: 0,
     mine: true,
   },
@@ -374,10 +373,7 @@ function buildSamples(): MyListing[] {
       createdAt: daysFromNow(-row.postedDaysAgo),
       updatedAt: daysFromNow(-row.postedDaysAgo),
       status: expired ? "expired" : status,
-      expiresAt:
-        status === "pending_payment"
-          ? null
-          : daysFromNow(expired ? -2 : 30 - row.postedDaysAgo),
+      expiresAt: daysFromNow(expired ? -2 : 30 - row.postedDaysAgo),
       media: row.photos.map((seed, i) => ({
         id: `${index}-${i}`,
         url: photo(seed),

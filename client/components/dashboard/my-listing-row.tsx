@@ -3,7 +3,7 @@ import { ImageOff, MapPin, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PayButton } from "@/components/dashboard/pay-button";
+import { RenewButton } from "@/components/dashboard/renew-button";
 import {
   STATUS_LABELS,
   formatDate,
@@ -27,9 +27,12 @@ const STATUS_TONE: Record<
 export function MyListingRow({
   listing,
   onDelete,
+  onRenew,
 }: {
   listing: MyListing;
   onDelete?: (id: string) => void;
+  // Pass this to show "Renew" on an ended listing. It must throw if the server refuses.
+  onRenew?: (id: string) => Promise<void>;
 }) {
   const cover = listing.media.find((m) => m.mediaType === "image");
 
@@ -110,14 +113,18 @@ export function MyListingRow({
         )}
       </div>
 
-      {/* Paying belongs to the owner's dashboard, so it only shows when onDelete is passed. */}
-      {onDelete &&
-        (listing.status === "pending_payment" ||
-          listing.status === "expired") && (
+      {/* Renewing is free and belongs to the owner's dashboard. */}
+      {onRenew &&
+        (listing.status === "expired" ||
+          listing.status === "pending_payment") && (
           <div className="flex w-full justify-end border-t border-border pt-3 sm:basis-full">
-            <PayButton
-              listingId={listing.id}
-              renew={listing.status === "expired"}
+            <RenewButton
+              label={
+                listing.status === "expired"
+                  ? "Renew for 30 days"
+                  : "Publish for 30 days"
+              }
+              onRenew={() => onRenew(listing.id)}
             />
           </div>
         )}
